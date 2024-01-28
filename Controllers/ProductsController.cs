@@ -8,6 +8,7 @@ using Microsoft.CodeAnalysis;
 using System.Drawing;
 using System;
 using insurance_backend.Helpers;
+using insurance_backend.Interfaces;
 
 namespace insurance_backend.Controllers
 {
@@ -16,9 +17,9 @@ namespace insurance_backend.Controllers
 	public class ProductsController : ControllerBase
 	{
 		private readonly ILogger<ProductsController> _logger;
-		private ProductService _productService;
+		private IProductService<Product> _productService;
 
-		public ProductsController(ILogger<ProductsController> logger, ProductService service)
+		public ProductsController(ILogger<ProductsController> logger, IProductService<Product> service)
 		{
 			_logger = logger;
 			_productService = service;

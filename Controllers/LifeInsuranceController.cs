@@ -4,6 +4,7 @@ using insurance_backend.Models.Response;
 using insurance_backend.Models;
 using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
+using insurance_backend.Interfaces;
 
 namespace insurance_backend.Controllers
 {
@@ -11,9 +12,9 @@ namespace insurance_backend.Controllers
 	public class LifeInsuranceController : Controller
 	{
 		private readonly ILogger<LifeInsuranceController> _logger;
-		private LifeInsuranceService _lifeInsuranceService;
+		private ILifeInsuranceService<LifeInsuranceProduct> _lifeInsuranceService;
 
-		public LifeInsuranceController(ILogger<LifeInsuranceController> logger, LifeInsuranceService lifeInsuranceService)
+		public LifeInsuranceController(ILogger<LifeInsuranceController> logger, ILifeInsuranceService<LifeInsuranceProduct> lifeInsuranceService)
 		{
 			_logger = logger;
 			_lifeInsuranceService = lifeInsuranceService;

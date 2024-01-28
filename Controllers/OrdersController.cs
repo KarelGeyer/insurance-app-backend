@@ -7,6 +7,7 @@ using insurance_backend.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using insurance_backend.Models.Request.Order;
+using insurance_backend.Interfaces;
 
 namespace insurance_backend.Controllers
 {
@@ -15,9 +16,9 @@ namespace insurance_backend.Controllers
 	public class OrdersController : ControllerBase
 	{
 		private readonly ILogger<OrdersController> _logger;
-		private OrdersService _orderService;
+		private IOrderService<Order> _orderService;
 
-		public OrdersController(ILogger<OrdersController> logger, OrdersService service)
+		public OrdersController(ILogger<OrdersController> logger, IOrderService<Order> service)
 		{
 			_logger = logger;
 			_orderService = service;

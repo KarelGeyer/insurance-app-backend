@@ -1,3 +1,5 @@
+using insurance_backend.Interfaces;
+using insurance_backend.Models;
 using insurance_backend.Models.Config;
 using insurance_backend.Models.Db;
 using insurance_backend.Services;
@@ -9,15 +11,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<DBModel>(builder.Configuration.GetSection("MongoDB"));
 
 // HTTP services
-builder.Services.AddSingleton<PensionService>();
-builder.Services.AddSingleton<ProductService>();
-builder.Services.AddSingleton<LifeInsuranceService>();
-builder.Services.AddSingleton<PropertyInsuranceService>();
-builder.Services.AddSingleton<OrdersService>();
+builder.Services.AddSingleton<IPensionService<PensionProduct>, PensionService>();
+builder.Services.AddSingleton<IProductService<Product>, ProductService>();
+builder.Services.AddSingleton<ILifeInsuranceService<LifeInsuranceProduct>, LifeInsuranceService>();
+builder.Services.AddSingleton<IPropertyInsuranceService<ProductInsuranceProduct>, PropertyInsuranceService>();
+builder.Services.AddSingleton<IOrderService<Order>, OrdersService>();
 
 // Email service
 builder.Services.Configure<MailConfig>(builder.Configuration.GetSection("MailConfig"));
-builder.Services.AddSingleton<EmailService>();
+builder.Services.AddSingleton<IEmailService, EmailService>();
 
 // Add additional services
 builder.Services.AddCors();

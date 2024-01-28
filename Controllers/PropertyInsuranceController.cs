@@ -1,5 +1,6 @@
 ﻿using Azure.Core;
 using insurance_backend.Helpers;
+using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Response;
@@ -14,9 +15,9 @@ namespace insurance_backend.Controllers
 	public class PropertyInsuranceController : ControllerBase
 	{
 		private readonly ILogger<PropertyInsuranceController> _logger;
-		private PropertyInsuranceService _propertyInsuranceService;
+		private IPropertyInsuranceService<ProductInsuranceProduct> _propertyInsuranceService;
 
-		public PropertyInsuranceController(ILogger<PropertyInsuranceController> logger, PropertyInsuranceService service)
+		public PropertyInsuranceController(ILogger<PropertyInsuranceController> logger, IPropertyInsuranceService<ProductInsuranceProduct> service)
 		{
 			_logger = logger;
 			_propertyInsuranceService = service;

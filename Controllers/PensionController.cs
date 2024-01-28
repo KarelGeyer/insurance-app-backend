@@ -6,6 +6,7 @@ using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 using insurance_backend.Models.Request;
 using insurance_backend.Models.Requests;
+using insurance_backend.Interfaces;
 
 namespace insurance_backend.Controllers
 {
@@ -13,9 +14,9 @@ namespace insurance_backend.Controllers
 	public class PensionController : Controller
 	{
 		private readonly ILogger<PensionController> _logger;
-		private PensionService _pensionService;
+		private IPensionService<PensionProduct> _pensionService;
 
-		public PensionController(ILogger<PensionController> logger, PensionService service)
+		public PensionController(ILogger<PensionController> logger, IPensionService<PensionProduct> service)
 		{
 			_logger = logger;
 			_pensionService = service;

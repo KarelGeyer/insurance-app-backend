@@ -21,9 +21,9 @@ namespace insurance_backend.Services
 	{
 		ILogger<OrdersService> _logger;
 		private readonly IMongoCollection<Order> _ordersCollection;
-		private readonly EmailService _emailService;
+		private readonly IEmailService _emailService;
 
-		public OrdersService(IOptions<DBModel> dbModel, ILogger<OrdersService> logger, EmailService emailService)
+		public OrdersService(IOptions<DBModel> dbModel, ILogger<OrdersService> logger, IEmailService emailService)
 		{
 			_logger = logger;
 			_emailService = emailService;
