@@ -1,20 +1,18 @@
 ﻿using insurance_backend.Enums;
 using insurance_backend.Helpers;
+using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Db;
 using insurance_backend.Models.Request;
 using insurance_backend.Models.Requests;
 using insurance_backend.Models.Response;
-using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Collections.Generic;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace insurance_backend.Services
 {
-	public class PensionService
+	public class PensionService : IPensionService<PensionProduct>
 	{
 		ILogger<PensionService> _logger;
 		private readonly IMongoCollection<StateContributionValue> _stateContributionValuesCollection;
@@ -33,31 +31,37 @@ namespace insurance_backend.Services
 
 		public async Task<BaseResponse<List<PensionProduct>>> GetAll()
 		{
+			_logger.LogInformation($"{nameof(GetAll)} - Start");
 			BaseResponse<List<PensionProduct>> res = new();
 
 			try
 			{
+				_logger.LogInformation($"{nameof(GetAll)} - Attempting to retrieve all the products");
 				List<PensionProduct>? products = await _pensionSchemeCollection.Find(new BsonDocument()).ToListAsync();
 
 				if (products == null)
 				{
+					_logger.LogError($"{nameof(GetAll)} - products could not have been found");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Pension products were not found";
 				}
 				else
 				{
+					_logger.LogInformation($"{nameof(GetAll)} - Products were found");
 					res.Data = products;
 					res.Status = HttpStatus.OK;
 				}
 			}
 			catch (Exception ex)
 			{
+				_logger.LogError($"{nameof(GetAll)} - error apeared while trying to fetch all the products");
 				res.Data = null;
 				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
 				res.ResponseMessage = ex.Message;
 			}
 
+			_logger.LogInformation($"{nameof(GetAll)} - End");
 			return res;
 		}
 

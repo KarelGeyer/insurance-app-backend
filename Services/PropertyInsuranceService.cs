@@ -8,10 +8,11 @@ using insurance_backend.Enums;
 using static System.Runtime.InteropServices.JavaScript.JSType;
 using insurance_backend.Helpers;
 using MongoDB.Bson;
+using insurance_backend.Interfaces;
 
 namespace insurance_backend.Services
 {
-	public class PropertyInsuranceService
+	public class PropertyInsuranceService : IPropertyInsuranceService<ProductInsuranceProduct>
 	{
 		ILogger<PensionService> _logger;
 		private readonly IMongoCollection<ProductInsuranceProduct> _propertyInsuranceProductsCollection;
@@ -28,7 +29,6 @@ namespace insurance_backend.Services
 		public async Task<BaseResponse<List<ProductInsuranceProduct>>> GetAll()
 		{
 			_logger.LogInformation($"{nameof(GetAll)} -  Start");
-
 			BaseResponse<List<ProductInsuranceProduct>> res = new();
 
 			try
@@ -61,32 +61,38 @@ namespace insurance_backend.Services
 
 		public async Task<BaseResponse<ProductInsuranceProduct>> GetOne(string id)
 		{
+			_logger.LogInformation($"{nameof(GetOne)} - Start");
 			BaseResponse<ProductInsuranceProduct> res = new();
 			FilterDefinition<ProductInsuranceProduct> filter = Builders<ProductInsuranceProduct>.Filter.Eq("Id", id);
 
 			try
 			{
+				_logger.LogInformation($"{nameof(GetOne)} - Attempting to find the product by id {id}");
 				ProductInsuranceProduct? product = await _propertyInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product == null)
 				{
+					_logger.LogError($"{nameof(GetOne)} - Could not find a product by id {id}");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = $"Could not find the product by Id {id}";
 				}
 				else
 				{
+					_logger.LogInformation($"{nameof(GetOne)} - product by id {id} was found");
 					res.Data = product;
 					res.Status = HttpStatus.OK;
 				}
 			}
 			catch (Exception ex)
 			{
+				_logger.LogError($"{nameof(GetOne)} - Error apeared while trying to fetch a product");
 				res.Data = null;
 				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
 				res.ResponseMessage = ex.Message;
 			}
 
+			_logger.LogInformation($"{nameof(GetOne)} - End");
 			return res;
 		}
 		#endregion
@@ -94,15 +100,18 @@ namespace insurance_backend.Services
 		#region Calculations
 		public async Task<BaseResponse<PropertyInsuranceCalcResponse>> CalculatePropertyInsurance(PropertyInsuranceProductCalcRequest request)
 		{
+			_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Start");
 			BaseResponse<PropertyInsuranceCalcResponse> res = new();
 			FilterDefinition<ProductInsuranceProduct> filter = Builders<ProductInsuranceProduct>.Filter.Eq("productId", request.ProductId);
 
 			try
 			{
+				_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Attempting to fetch the product by product id");
 				ProductInsuranceProduct? product = await _propertyInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product != null)
 				{
+					_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Attempting to calculate the property insurance");
 					double perMeterPropertyPrice = GetCoefficient(request.PropertyType, product);
 					Dictionary<string, double> calcResult = CalculatePropertyInsurance(
 						request,
@@ -130,12 +139,13 @@ namespace insurance_backend.Services
 						};
 
 					PropertyInsuranceCalcResponse response = new() { PerMeterSquareCalc = perMeterCalc, TotalCalc = totalCalc };
-
+					_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Finished calculating the property insurance");
 					res.Data = response;
 					res.Status = HttpStatus.OK;
 				}
 				else
 				{
+					_logger.LogError($"{nameof(CalculatePropertyInsurance)} - Could not fetch the product by product id");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = $"Could not find the product by Id {request.ProductId}";
@@ -143,11 +153,13 @@ namespace insurance_backend.Services
 			}
 			catch (Exception ex)
 			{
+				_logger.LogError($"{nameof(CalculatePropertyInsurance)} - Error apeared while trying to fetch a product");
 				res.Data = null;
 				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
 				res.ResponseMessage = ex.Message;
 			}
 
+			_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - End");
 			return res;
 		}
 
@@ -161,7 +173,6 @@ namespace insurance_backend.Services
 			double propertyPrice = 0;
 			double equipmentPrice = 0;
 			double liabilityPrice = 0;
-			double totalPrice = 0;
 
 			if (data.ShouldCalculateProperty)
 				propertyPrice = coefficient * data.SquareMeters;
@@ -170,13 +181,15 @@ namespace insurance_backend.Services
 			if (data.ShouldCalculateLiability)
 				liabilityPrice = liabilityCoefficient * data.SquareMeters;
 
-			totalPrice = propertyPrice + equipmentPrice + liabilityPrice;
+			double totalPrice = propertyPrice + equipmentPrice + liabilityPrice;
 
-			Dictionary<string, double> result = new Dictionary<string, double>();
-			result.Add("PropertyPrice", propertyPrice);
-			result.Add("EquipmentPrice", equipmentPrice);
-			result.Add("LiabilityPrice", liabilityPrice);
-			result.Add("Total", totalPrice);
+			Dictionary<string, double> result = new Dictionary<string, double>
+			{
+				{ "PropertyPrice", propertyPrice },
+				{ "EquipmentPrice", equipmentPrice },
+				{ "LiabilityPrice", liabilityPrice },
+				{ "Total", totalPrice }
+			};
 
 			return result;
 		}

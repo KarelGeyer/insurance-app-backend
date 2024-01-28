@@ -1,5 +1,6 @@
 ﻿using insurance_backend.Enums;
 using insurance_backend.Helpers;
+using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Db;
 using insurance_backend.Models.Request.Product;
@@ -12,7 +13,7 @@ using System.Reflection;
 
 namespace insurance_backend.Services
 {
-	public class LifeInsuranceService
+	public class LifeInsuranceService : ILifeInsuranceService<LifeInsuranceProduct>
 	{
 		ILogger<PensionService> _logger;
 		private readonly IMongoCollection<LifeInsuranceProduct> _lifeInsuranceProductsCollection;
@@ -29,7 +30,6 @@ namespace insurance_backend.Services
 		public async Task<BaseResponse<List<LifeInsuranceProduct>>> GetAll()
 		{
 			_logger.LogInformation($"{nameof(GetAll)} -  Start");
-
 			BaseResponse<List<LifeInsuranceProduct>> res = new();
 
 			try
@@ -60,96 +60,115 @@ namespace insurance_backend.Services
 			return res;
 		}
 
-		public async Task<BaseResponse<LifeInsuranceProduct>> GetOneById(string id)
+		public async Task<BaseResponse<LifeInsuranceProduct>> GetOne(string id)
 		{
+			_logger.LogInformation($"{nameof(GetOne)} - Start");
 			BaseResponse<LifeInsuranceProduct> res = new();
 			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq("Id", id);
 
 			try
 			{
+				_logger.LogInformation($"{nameof(GetOne)} - Attempting to find a product by id: {id}");
 				LifeInsuranceProduct? product = await _lifeInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product == null)
 				{
+					_logger.LogError($"{nameof(GetOne)} - product by id: {id} was not found");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = $"Could not find the product by Id {id}";
 				}
 				else
 				{
+					_logger.LogError($"{nameof(GetOne)} - succesfully found a product by id: {id}");
 					res.Data = product;
 					res.Status = HttpStatus.OK;
 				}
 			}
 			catch (Exception ex)
 			{
+				_logger.LogError($"{nameof(GetOne)} - error apeared while trying to find product by id: {id}");
 				res.Data = null;
 				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
 				res.ResponseMessage = ex.Message;
 			}
 
+			_logger.LogInformation($"{nameof(GetOne)} - End");
 			return res;
 		}
 
 		public async Task<BaseResponse<LifeInsuranceProduct>> GetOneByProductId(string productId)
 		{
+			_logger.LogInformation($"{nameof(GetOneByProductId)} - Start");
 			BaseResponse<LifeInsuranceProduct> res = new();
 			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq("ProductId", productId);
 
 			try
 			{
+				_logger.LogInformation($"{nameof(GetOneByProductId)} - Attempting to find a product by product id: {productId}");
 				LifeInsuranceProduct? product = await _lifeInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product == null)
 				{
+					_logger.LogError($"{nameof(GetOneByProductId)} - product by product id: {productId} was not found");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = $"Could not find the product by Id {productId}";
 				}
 				else
 				{
+					_logger.LogError($"{nameof(GetOneByProductId)} - succesfully found a product by product id: {productId}");
 					res.Data = product;
 					res.Status = HttpStatus.OK;
 				}
 			}
 			catch (Exception ex)
 			{
+				_logger.LogError($"{nameof(GetOneByProductId)} - error apeared while trying to find product by product id: {productId}");
 				res.Data = null;
 				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
 				res.ResponseMessage = ex.Message;
 			}
+
+			_logger.LogInformation($"{nameof(GetOneByProductId)} - End");
 
 			return res;
 		}
 
 		public async Task<BaseResponse<string>> GetProductIdFromId(string id)
 		{
+			_logger.LogInformation($"{nameof(GetProductIdFromId)} - Start");
 			BaseResponse<string> res = new();
 			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq("Id", id);
 
 			try
 			{
+				_logger.LogInformation($"{nameof(GetProductIdFromId)} - Attempting to find a product by id: {id}");
 				LifeInsuranceProduct? product = await _lifeInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product == null)
 				{
+					_logger.LogError($"{nameof(GetProductIdFromId)} - product by id: {id} was not found");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = $"Could not find the product by Id {id}";
 				}
 				else
 				{
+					_logger.LogInformation($"{nameof(GetProductIdFromId)} - Succesfully retrieved a product by id: {id}");
 					res.Data = product.ProductId;
 					res.Status = HttpStatus.OK;
 				}
 			}
 			catch (Exception ex)
 			{
+				_logger.LogError($"{nameof(GetProductIdFromId)} - error apeared while trying to find product by id: {id}");
 				res.Data = null;
 				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
 				res.ResponseMessage = ex.Message;
 			}
 
+			_logger.LogInformation($"{nameof(GetProductIdFromId)} - End");
 			return res;
 		}
 		#endregion
@@ -157,15 +176,18 @@ namespace insurance_backend.Services
 		#region Calculator
 		public async Task<BaseResponse<LifeInsuranceCalcResponse>> CalculatePrice(LifeInsuranceProductCalcRequest productData)
 		{
+			_logger.LogInformation($"{nameof(CalculatePrice)} - Start");
 			BaseResponse<LifeInsuranceCalcResponse> res = new();
 			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq("productId", productData.ProductId);
 
 			try
 			{
+				_logger.LogInformation($"{nameof(CalculatePrice)} - Attempting to find a product by product id: {productData.ProductId}");
 				LifeInsuranceProduct? product = await _lifeInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product != null)
 				{
+					_logger.LogInformation($"{nameof(CalculatePrice)} - Succesfulyy retrieved a product with product id: {productData.ProductId}");
 					LifeInsuranceCalcResponse lifeInsuranceCalcResponse = new();
 					bool isSmoker = productData.IsSmoker;
 					bool doesSport = productData.DoesSport;
@@ -173,7 +195,8 @@ namespace insurance_backend.Services
 					double sportAdditive = product.SportCoefficient;
 
 					// REFACTOR THIS, THIS LOOKS LIKE SHIT, THIS CAN BE FOR SURE WRITEN AS A LOOP.
-					Dictionary<string, int> deathCalcResult = CalculatePrice(
+					_logger.LogInformation($"{nameof(CalculatePrice)} - Attempting to calcualte all the prices");
+					Dictionary<string, int> deathCalcResult = CalculateItemPrice(
 						true,
 						productData.DeathInsurance,
 						product.DeathCoefficient,
@@ -183,7 +206,7 @@ namespace insurance_backend.Services
 						sportAdditive
 					);
 
-					Dictionary<string, int> injuryCalcResult = CalculatePrice(
+					Dictionary<string, int> injuryCalcResult = CalculateItemPrice(
 						true,
 						productData.InjuriesInsurance,
 						product.InjuriesCoefficient,
@@ -193,7 +216,7 @@ namespace insurance_backend.Services
 						sportAdditive
 					);
 
-					Dictionary<string, int> diseaseCalcResult = CalculatePrice(
+					Dictionary<string, int> diseaseCalcResult = CalculateItemPrice(
 						true,
 						productData.DiseasesInsurance,
 						product.DiseasesCoefficient,
@@ -203,7 +226,7 @@ namespace insurance_backend.Services
 						sportAdditive
 					);
 
-					Dictionary<string, int> workIncapacityResult = CalculatePrice(
+					Dictionary<string, int> workIncapacityResult = CalculateItemPrice(
 						false,
 						productData.WorkIncapacityInsurance,
 						product.WorkIncapacityCoefficient,
@@ -213,7 +236,7 @@ namespace insurance_backend.Services
 						sportAdditive
 					);
 
-					Dictionary<string, int> invalidityCalcResult = CalculatePrice(
+					Dictionary<string, int> invalidityCalcResult = CalculateItemPrice(
 						true,
 						productData.InvalidityInsurance,
 						product.InvalidityCoefficient,
@@ -224,7 +247,7 @@ namespace insurance_backend.Services
 						productData.InvalidityLevel
 					);
 
-					Dictionary<string, int> hospitalizationCalcResult = CalculatePrice(
+					Dictionary<string, int> hospitalizationCalcResult = CalculateItemPrice(
 						false,
 						productData.HospitalizationInsurance,
 						product.HospitalizationCoefficient,
@@ -274,11 +297,13 @@ namespace insurance_backend.Services
 					result.YearlyLifeInsurance = yearlyLifeInsurance;
 					result.MonthlyLifeInsurance = monthlyLifeInsurance;
 
+					_logger.LogInformation($"{nameof(CalculatePrice)} - Finished calculating all the prices");
 					res.Data = result;
 					res.Status = HttpStatus.OK;
 				}
 				else
 				{
+					_logger.LogError($"{nameof(CalculatePrice)} - a product could not have been found");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = $"Could not find the product by Id {productData.ProductId}";
@@ -286,15 +311,17 @@ namespace insurance_backend.Services
 			}
 			catch (Exception ex)
 			{
+				_logger.LogError($"{nameof(CalculatePrice)} - error apeared while trying to find a product with id {productData.ProductId}");
 				res.Data = null;
 				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
 				res.ResponseMessage = ex.Message;
 			}
 
+			_logger.LogInformation($"{nameof(CalculatePrice)} - End");
 			return res;
 		}
 
-		private Dictionary<string, int> CalculatePrice(
+		private Dictionary<string, int> CalculateItemPrice(
 			bool isOnetimePayof,
 			int amount,
 			double coef,
@@ -322,7 +349,7 @@ namespace insurance_backend.Services
 			return res;
 		}
 
-		private Dictionary<string, int> CalculatePrice(
+		private Dictionary<string, int> CalculateItemPrice(
 			bool isOnetimePayof,
 			int amount,
 			double coef,
@@ -333,7 +360,7 @@ namespace insurance_backend.Services
 			InvalidityLevel invalidityLevel
 		)
 		{
-			Dictionary<string, int> baseRes = CalculatePrice(isOnetimePayof, amount, coef, isSmoker, smokeCoef, doesSport, sportCoef);
+			Dictionary<string, int> baseRes = CalculateItemPrice(isOnetimePayof, amount, coef, isSmoker, smokeCoef, doesSport, sportCoef);
 			int yearlyPrice = baseRes["yearly"];
 			int additive = (1 + ((int)invalidityLevel * 2 / 10));
 			int totalYearly = yearlyPrice * additive;
@@ -343,7 +370,7 @@ namespace insurance_backend.Services
 			return res;
 		}
 
-		private Dictionary<string, int> CalculatePrice(
+		private Dictionary<string, int> CalculateItemPrice(
 			bool isOnetimePayof,
 			int amount,
 			double coef,
@@ -355,7 +382,7 @@ namespace insurance_backend.Services
 			int HospitalizationLength
 		)
 		{
-			Dictionary<string, int> baseRes = CalculatePrice(isOnetimePayof, amount, coef, isSmoker, smokeCoef, doesSport, sportCoef);
+			Dictionary<string, int> baseRes = CalculateItemPrice(isOnetimePayof, amount, coef, isSmoker, smokeCoef, doesSport, sportCoef);
 			int yearlyPrice = baseRes["yearly"];
 			int additive = (HospitalizationLength / 1000) + 1;
 			int totalYearly = yearlyPrice * additive;

@@ -40,7 +40,7 @@ namespace insurance_backend.Controllers
 				throw new ArgumentException(Messages.Args_Exception);
 			}
 
-			BaseResponse<LifeInsuranceProduct> res = await _lifeInsuranceService.GetOneById(id);
+			BaseResponse<LifeInsuranceProduct> res = await _lifeInsuranceService.GetOne(id);
 			return res;
 		}
 

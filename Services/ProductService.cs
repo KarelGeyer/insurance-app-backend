@@ -1,5 +1,6 @@
 ﻿using insurance_backend.Enums;
 using insurance_backend.Helpers;
+using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Db;
 using insurance_backend.Models.Request.Product;
@@ -10,7 +11,7 @@ using MongoDB.Driver;
 
 namespace insurance_backend.Services
 {
-	public class ProductService
+	public class ProductService : IProductService<Product>
 	{
 		ILogger<PensionService> _logger;
 		private readonly IMongoCollection<Product> _productsCollection;

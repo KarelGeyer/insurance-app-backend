@@ -6,6 +6,7 @@ using insurance_backend.Models;
 using insurance_backend.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using insurance_backend.Models.Request.Order;
 
 namespace insurance_backend.Controllers
 {
@@ -48,30 +49,42 @@ namespace insurance_backend.Controllers
 
 		[HttpPost]
 		[Route("[action]")]
-		public async Task<BaseResponse<bool>> CreateOrder([FromBody] Order order)
+		public async Task<BaseResponse<bool>> CreateOrder([FromBody] OrderCreateRequest orderReq)
 		{
 			_logger.LogInformation($"{nameof(CreateOrder)} - Start");
+
+			Order order = orderReq.Order;
+
+			if (string.IsNullOrEmpty(orderReq.EmailAddress))
+			{
+				_logger.LogError($"{nameof(CreateOrder)} - {Messages.MissingProperty_Error(orderReq.EmailAddress)}");
+				throw new ArgumentNullException(nameof(orderReq.EmailAddress));
+			}
 
 			if (string.IsNullOrEmpty(order.ProductId))
 			{
 				_logger.LogError($"{nameof(CreateOrder)} - {Messages.MissingProperty_Error(order.ProductId)}");
 				throw new ArgumentNullException(nameof(order.ProductId));
 			}
+
 			if (string.IsNullOrEmpty(order.ProductName))
 			{
 				_logger.LogError($"{nameof(CreateOrder)} - {Messages.MissingProperty_Error(order.ProductName)}");
 				throw new ArgumentNullException(nameof(order.ProductName));
 			}
+
 			if (string.IsNullOrEmpty(order.Name))
 			{
 				_logger.LogError($"{nameof(CreateOrder)} - {Messages.MissingProperty_Error(order.Name)}");
 				throw new ArgumentNullException(nameof(order.Name));
 			}
+
 			if (string.IsNullOrEmpty(order.Surname))
 			{
 				_logger.LogError($"{nameof(CreateOrder)} - {Messages.MissingProperty_Error(order.Surname)}");
 				throw new ArgumentNullException(nameof(order.Surname));
 			}
+
 			if (order.Category.Equals(0))
 			{
 				_logger.LogError($"{nameof(CreateOrder)} - {Messages.MissingProperty_Error(order.Category)}");
@@ -98,28 +111,21 @@ namespace insurance_backend.Controllers
 
 			_logger.LogInformation($"{nameof(CreateOrder)} - Attempting to create a new order");
 
-			return await _orderService.Create(order);
+			return await _orderService.Create(orderReq);
 		}
 
 		[HttpDelete]
 		[Route("[action]")]
-		public async Task<BaseResponse<bool>> DeleteOrder(string orderId)
+		public async Task<BaseResponse<bool>> DeleteOrder(OrderDeleteRequest request)
 		{
-			if (orderId == null)
+			if (string.IsNullOrEmpty(request.OrderId))
 			{
-				_logger.LogError($"{nameof(DeleteOrder)} - {Messages.MissingProperty_Error(orderId)}");
-				throw new ArgumentNullException(nameof(orderId));
+				_logger.LogError($"{nameof(DeleteOrder)} - {Messages.MissingProperty_Error(request.OrderId)}");
+				throw new ArgumentNullException(nameof(request.OrderId));
 			}
 
-			_logger.LogInformation($"{nameof(DeleteOrder)} - Attempting to delete a product with id {orderId}");
-			return await _orderService.DeleteOne(orderId);
-		}
-
-		[HttpPost]
-		[Route("[action]")]
-		public void TestEmail(string body)
-		{
-			_orderService.TestEmail(body);
+			_logger.LogInformation($"{nameof(DeleteOrder)} - Attempting to delete a product with id {request.OrderId}");
+			return await _orderService.Delete(request);
 		}
 	}
 }

@@ -12,17 +12,21 @@ using MimeKit.Text;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.AspNetCore.Http.HttpResults;
+using insurance_backend.Models.Request.Order;
+using insurance_backend.Interfaces;
 
 namespace insurance_backend.Services
 {
-	public class OrdersService
+	public class OrdersService : IOrderService<Order>
 	{
 		ILogger<OrdersService> _logger;
 		private readonly IMongoCollection<Order> _ordersCollection;
+		private readonly EmailService _emailService;
 
-		public OrdersService(IOptions<DBModel> dbModel, ILogger<OrdersService> logger)
+		public OrdersService(IOptions<DBModel> dbModel, ILogger<OrdersService> logger, EmailService emailService)
 		{
 			_logger = logger;
+			_emailService = emailService;
 			MongoClient client = new MongoClient(dbModel.Value.ConnectionURI);
 			IMongoDatabase db = client.GetDatabase(dbModel.Value.DatabaseName);
 			_ordersCollection = db.GetCollection<Order>(dbModel.Value.OrdersCollectionName);
@@ -92,12 +96,18 @@ namespace insurance_backend.Services
 			return res;
 		}
 
-		public async Task<BaseResponse<bool>> Create(Order order)
+		public async Task<BaseResponse<bool>> Create(OrderCreateRequest orderReq)
 		{
 			BaseResponse<bool> res = new();
+			Order order = orderReq.Order;
 			try
 			{
 				await _ordersCollection.InsertOneAsync(order);
+
+				string email = $"<p>Dear {order.Name}, Thank you for ordering {order.ProductName}. It was created under with id: {order.Id}</p>";
+				string subject = $"<p>Order {order.Id} succesfully created</p>";
+				_emailService.SendEmail(email, subject, orderReq.EmailAddress);
+
 				res.Data = true;
 				res.Status = HttpStatus.OK;
 			}
@@ -111,10 +121,10 @@ namespace insurance_backend.Services
 			return res;
 		}
 
-		public async Task<BaseResponse<bool>> DeleteOne(string id)
+		public async Task<BaseResponse<bool>> Delete(OrderDeleteRequest request)
 		{
 			BaseResponse<bool> res = new();
-			FilterDefinition<Order> filter = Builders<Order>.Filter.Eq("Id", id);
+			FilterDefinition<Order> filter = Builders<Order>.Filter.Eq("Id", request.OrderId);
 
 			try
 			{
@@ -124,10 +134,14 @@ namespace insurance_backend.Services
 				{
 					res.Data = false;
 					res.Status = HttpStatus.NOT_FOUND;
-					res.ResponseMessage = $"Could not find the product by Id {id}";
+					res.ResponseMessage = $"Could not find the product by Id {request.OrderId}";
 				}
 				else
 				{
+					string email = $"<p>Dear Customer, your order with number {request.OrderId} was succesfully canceled</p>";
+					string subject = $"<p>Your order succesfully deleted</p>";
+					_emailService.SendEmail(email, subject, request.Email);
+
 					res.Data = true;
 					res.Status = HttpStatus.OK;
 				}
@@ -140,21 +154,6 @@ namespace insurance_backend.Services
 			}
 
 			return res;
-		}
-
-		public void TestEmail(string body)
-		{
-			MimeMessage email = new();
-			email.From.Add(MailboxAddress.Parse("eudora.bins@ethereal.email"));
-			email.To.Add(MailboxAddress.Parse("eudora.bins@ethereal.email"));
-			email.Subject = "Test Subject";
-			email.Body = new TextPart(TextFormat.Html) { Text = body };
-
-			SmtpClient client = new();
-			client.Connect("smtp.ethereal.email", 587, SecureSocketOptions.StartTls);
-			client.Authenticate("eudora.bins@ethereal.email", "chjTxQrmvNQc3Z3zSt");
-			client.Send(email);
-			client.Disconnect(true);
 		}
 	}
 }
