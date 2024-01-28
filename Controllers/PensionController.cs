@@ -23,6 +23,26 @@ namespace insurance_backend.Controllers
 
 		[HttpGet]
 		[Route("[action]")]
+		public async Task<BaseResponse<List<PensionProduct>>> GetAllPensionProducts()
+		{
+			_logger.LogInformation($"{nameof(GetAllPensionProducts)} - Attempting to fetch all state pension products");
+
+			BaseResponse<List<PensionProduct>> res = await _pensionService.GetAll();
+			return res;
+		}
+
+		[HttpGet]
+		[Route("[action]")]
+		public async Task<BaseResponse<PensionProduct>> GetPensionProductsById(string id)
+		{
+			_logger.LogInformation($"{nameof(GetAllPensionProducts)} - Attempting to fetch all state pension products");
+
+			BaseResponse<PensionProduct> res = await _pensionService.GetOne(id);
+			return res;
+		}
+
+		[HttpGet]
+		[Route("[action]")]
 		public async Task<BaseResponse<List<StateContributionValue>>> GetStateContributions()
 		{
 			_logger.LogInformation($"{nameof(GetStateContributions)} - Attempting to fetch all state contribution values");
