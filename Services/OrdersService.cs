@@ -1,19 +1,13 @@
-﻿using insurance_backend.Models.Db;
-using insurance_backend.Models;
-using Microsoft.Extensions.Options;
-using MongoDB.Driver;
-using insurance_backend.Services;
-using insurance_backend.Enums;
-using insurance_backend.Helpers;
-using insurance_backend.Models.Response;
-using MongoDB.Bson;
-using MimeKit;
-using MimeKit.Text;
-using MailKit.Net.Smtp;
-using MailKit.Security;
-using Microsoft.AspNetCore.Http.HttpResults;
-using insurance_backend.Models.Request.Order;
+﻿using insurance_backend.Enums;
 using insurance_backend.Interfaces;
+using insurance_backend.Models;
+using insurance_backend.Models.Db;
+using insurance_backend.Models.Request.Order;
+using insurance_backend.Models.Response;
+using insurance_backend.Resources;
+using Microsoft.Extensions.Options;
+using MongoDB.Bson;
+using MongoDB.Driver;
 
 namespace insurance_backend.Services
 {
@@ -43,7 +37,7 @@ namespace insurance_backend.Services
 
 				if (orders == null || !orders.Any())
 				{
-					_logger.LogError($"{nameof(GetAll)} - {Messages.CannotBeValueOf_Error(nameof(GetAll), orders)}");
+					_logger.LogError($"{nameof(GetAll)} - failed to get all Orders");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Could not find the products";
@@ -104,9 +98,17 @@ namespace insurance_backend.Services
 			{
 				await _ordersCollection.InsertOneAsync(order);
 
-				string email = $"<p>Dear {order.Name}, Thank you for ordering {order.ProductName}. It was created under with id: {order.Id}</p>";
-				string subject = $"<p>Order {order.Id} succesfully created</p>";
-				_emailService.SendEmail(email, subject, orderReq.EmailAddress);
+				string? emailBase = MailTemplates.ResourceManager.GetString("Mail_Order_Created_Body");
+				string? subjectBase = MailTemplates.ResourceManager.GetString("Mail_Order_Created_Subject");
+
+				if (!string.IsNullOrEmpty(emailBase) && !string.IsNullOrEmpty(subjectBase))
+				{
+					string customerName = $"{order.Name} {order.Surname}";
+					string email = string.Format(emailBase, customerName, order.ProductName, order.Id);
+					string subject = string.Format(subjectBase, order.Id);
+
+					_emailService.SendEmail(email, subject, orderReq.EmailAddress);
+				}
 
 				res.Data = true;
 				res.Status = HttpStatus.OK;
@@ -138,9 +140,16 @@ namespace insurance_backend.Services
 				}
 				else
 				{
-					string email = $"<p>Dear Customer, your order with number {request.OrderId} was succesfully canceled</p>";
-					string subject = $"<p>Your order succesfully deleted</p>";
-					_emailService.SendEmail(email, subject, request.Email);
+					string? emailBase = MailTemplates.ResourceManager.GetString("Mail_Order_Deleted_Body");
+					string? subjectBase = MailTemplates.ResourceManager.GetString("Mail_Order_Deleted_Subject");
+
+					if (!string.IsNullOrEmpty(emailBase) && !string.IsNullOrEmpty(subjectBase))
+					{
+						string customerName = $"{order.Name} {order.Surname}";
+						string email = string.Format(emailBase, customerName, request.OrderId);
+
+						_emailService.SendEmail(email, subjectBase, request.Email);
+					}
 
 					res.Data = true;
 					res.Status = HttpStatus.OK;

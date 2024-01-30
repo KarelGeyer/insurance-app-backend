@@ -1,10 +1,10 @@
-﻿using insurance_backend.Helpers;
-using insurance_backend.Models.Request.Product;
+﻿using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Response;
 using insurance_backend.Models;
 using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 using insurance_backend.Interfaces;
+using Microsoft.CodeAnalysis;
 
 namespace insurance_backend.Controllers
 {
@@ -36,10 +36,7 @@ namespace insurance_backend.Controllers
 			_logger.LogInformation($"{nameof(GetLifeInsuraceProductById)} - Attempting to fetch life insurance product by id {id}");
 
 			if (string.IsNullOrEmpty(id))
-			{
-				_logger.LogError(Messages.CannotBeValueOf_Error(nameof(CalculateLifeInsurance), id));
-				throw new ArgumentException(Messages.Args_Exception);
-			}
+				throw new ArgumentNullException(nameof(id));
 
 			BaseResponse<LifeInsuranceProduct> res = await _lifeInsuranceService.GetOne(id);
 			return res;
@@ -54,10 +51,8 @@ namespace insurance_backend.Controllers
 			);
 
 			if (string.IsNullOrEmpty(productId))
-			{
-				_logger.LogError(Messages.CannotBeValueOf_Error(nameof(CalculateLifeInsurance), productId));
-				throw new ArgumentException(Messages.Args_Exception);
-			}
+				throw new ArgumentNullException(nameof(productId));
+
 			BaseResponse<LifeInsuranceProduct> res = await _lifeInsuranceService.GetOneByProductId(productId);
 			return res;
 		}
@@ -69,10 +64,8 @@ namespace insurance_backend.Controllers
 			_logger.LogInformation($"{nameof(GetLifeInsuraceProductId)} - Attempting to retrieve a life insurance productid using id {id}");
 
 			if (string.IsNullOrEmpty(id))
-			{
-				_logger.LogError(Messages.CannotBeValueOf_Error(nameof(CalculateLifeInsurance), id));
-				throw new ArgumentException(Messages.Args_Exception);
-			}
+				throw new ArgumentNullException(nameof(id));
+
 			BaseResponse<string> res = await _lifeInsuranceService.GetProductIdFromId(id);
 			return res;
 		}
@@ -86,16 +79,10 @@ namespace insurance_backend.Controllers
 			);
 
 			if (string.IsNullOrEmpty(request.ProductId))
-			{
-				_logger.LogError(Messages.CannotBeValueOf_Error(nameof(CalculateLifeInsurance), request.ProductId));
-				throw new ArgumentException(Messages.Args_Exception);
-			}
+				throw new ArgumentNullException(nameof(request.ProductId));
 
 			if (request.HospitalizationInsurance > 0 && request.HospitalizationLength < 1)
-			{
-				_logger.LogError(Messages.CannotBeValueOf_Error(nameof(CalculateLifeInsurance), request.HospitalizationLength));
-				throw new ArgumentException(Messages.Args_Exception);
-			}
+				throw new ArgumentException(nameof(request.HospitalizationInsurance));
 
 			BaseResponse<LifeInsuranceCalcResponse> res = await _lifeInsuranceService.CalculatePrice(request);
 			return res;

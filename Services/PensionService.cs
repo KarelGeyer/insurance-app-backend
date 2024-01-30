@@ -1,14 +1,16 @@
 ﻿using insurance_backend.Enums;
-using insurance_backend.Helpers;
 using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Db;
 using insurance_backend.Models.Request;
+using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Requests;
 using insurance_backend.Models.Response;
+using insurance_backend.Resources;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using Org.BouncyCastle.Ocsp;
 
 namespace insurance_backend.Services
 {
@@ -17,10 +19,19 @@ namespace insurance_backend.Services
 		ILogger<PensionService> _logger;
 		private readonly IMongoCollection<StateContributionValue> _stateContributionValuesCollection;
 		private readonly IMongoCollection<PensionProduct> _pensionSchemeCollection;
+		private readonly IEmailService _emailService;
+		private readonly IProductService<Product> _productService;
 
-		public PensionService(IOptions<DBModel> dbModel, ILogger<PensionService> logger)
+		public PensionService(
+			IOptions<DBModel> dbModel,
+			ILogger<PensionService> logger,
+			IEmailService emailService,
+			IProductService<Product> productService
+		)
 		{
 			_logger = logger;
+			_emailService = emailService;
+			_productService = productService;
 
 			MongoClient client = new MongoClient(dbModel.Value.ConnectionURI);
 			IMongoDatabase db = client.GetDatabase(dbModel.Value.DatabaseName);
@@ -29,6 +40,7 @@ namespace insurance_backend.Services
 			_pensionSchemeCollection = db.GetCollection<PensionProduct>(dbModel.Value.PensionSchemeCollectionName);
 		}
 
+		#region GET
 		public async Task<BaseResponse<List<PensionProduct>>> GetAll()
 		{
 			_logger.LogInformation($"{nameof(GetAll)} - Start");
@@ -79,7 +91,7 @@ namespace insurance_backend.Services
 
 				if (product == null)
 				{
-					_logger.LogError($"{nameof(GetOne)} - {Messages.CannotBeValueOf_Error(nameof(GetOne), product)}");
+					_logger.LogError($"{nameof(GetOne)} - failed to get all a product");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Could not find the product";
@@ -101,7 +113,56 @@ namespace insurance_backend.Services
 			_logger.LogInformation($"{nameof(GetOne)} - End");
 			return res;
 		}
+		#endregion
 
+		public async Task<BaseResponse<bool>> Create(PensionProductCreateRequest req)
+		{
+			_logger.LogInformation($"{nameof(Create)} - Start");
+			BaseResponse<bool> response = new();
+			Guid id = new();
+
+			ProductCreateRequest baseProduct = new ProductCreateRequest()
+			{
+				Id = id.ToString(),
+				Name = req.Name,
+				Description = req.Description,
+				CompanyName = req.CompanyName,
+				CompanyLogo = req.CompanyLogo,
+				Category = req.Category,
+			};
+
+			PensionProduct pensionProduct = new PensionProduct()
+			{
+				ProductId = id.ToString(),
+				Name = req.Name,
+				DynamicPercentage = req.DynamicPercentage,
+				ConservativePercentage = req.ConservativePercentage,
+				BalancedPercentage = req.BalancedPercentage,
+			};
+
+			try
+			{
+				_logger.LogInformation($"{nameof(Create)} - Attempting to store both product and pension scheme product");
+				await _productService.Create(baseProduct);
+				await _pensionSchemeCollection.InsertOneAsync(pensionProduct);
+
+				response.Data = true;
+				response.Status = HttpStatus.OK;
+				_logger.LogInformation($"{nameof(Create)} - sucesfully stored");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError($"{nameof(Create)} - Something failed while trying to store pension scheme product");
+				response.Data = false;
+				response.Status = HttpStatus.INTERNAL_SERVER_ERROR;
+				response.ResponseMessage = ex.Message;
+			}
+
+			_logger.LogInformation($"{nameof(Create)} - End");
+			return response;
+		}
+
+		#region Calculations
 		public async Task<BaseResponse<List<StateContributionValue>>> GetStateContributions()
 		{
 			_logger.LogInformation($"{nameof(GetStateContributions)} -  Start");
@@ -117,9 +178,7 @@ namespace insurance_backend.Services
 				}
 				else
 				{
-					_logger.LogError(
-						$"{nameof(GetStateContributions)} - {Messages.CannotBeValueOf_Error(nameof(GetStateContributions), stateContrubionValues)}"
-					);
+					_logger.LogError($"{nameof(GetStateContributions)} - Failed to get all contributions");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "State contribution values could not have been found";
@@ -145,7 +204,9 @@ namespace insurance_backend.Services
 
 			try
 			{
-				FilterDefinition<PensionProduct> filter = Builders<PensionProduct>.Filter.Eq("ProductId", data.ProductId);
+				string? productIdString = Constants.ResourceManager.GetString("Constant_Product_Id");
+
+				FilterDefinition<PensionProduct> filter = Builders<PensionProduct>.Filter.Eq(productIdString, data.ProductId);
 				List<StateContributionValue> state = _stateContributionValuesCollection.Find(new BsonDocument()).ToList();
 				PensionProduct? product = await _pensionSchemeCollection.Find(filter).FirstAsync();
 
@@ -162,8 +223,11 @@ namespace insurance_backend.Services
 				}
 				else
 				{
+					int retirementAge = int.Parse(Constants.ResourceManager.GetString("Constants_Retirement_Age")!);
+					int monthsInYear = int.Parse(Constants.ResourceManager.GetString("Constant_Months_In_Year")!);
+
 					double totalSavings = data.CurrentSavings;
-					int yearsToRetirement = 65 - data.UserAge;
+					int yearsToRetirement = retirementAge - data.UserAge;
 					int stateContribution = GetStateContribution(data.UserContribution);
 					double strategyInterestRate = GetStrategyInterestrate(product, data.PensionStrategy);
 
@@ -194,7 +258,24 @@ namespace insurance_backend.Services
 					resData.StateContribution = stateContribution;
 					resData.TotalSavings = totalValue;
 					resData.Valorization = valorization;
-					resData.StateContributionTotal = stateContribution * 12 * yearsToRetirement;
+					resData.StateContributionTotal = stateContribution * monthsInYear * yearsToRetirement;
+
+					if (!string.IsNullOrEmpty(data.Email))
+					{
+						_logger.LogInformation($"{nameof(CalculatePension)} - Attempting to send an email");
+
+						string? emailBase = MailTemplates.ResourceManager.GetString("Mail_Pension_Scheme_Calculation_Body");
+						string? subject = MailTemplates.ResourceManager.GetString("Mail_Pension_Scheme_Calculation_Subject");
+
+						if (!string.IsNullOrEmpty(emailBase) && !string.IsNullOrEmpty(subject))
+						{
+							string email = string.Format(emailBase, product.Name, stateContribution, totalValue, valorization);
+
+							_emailService.SendEmail(email, subject, data.Email);
+						}
+					}
+					else
+						_logger.LogInformation($"{nameof(CalculatePension)} - email address is missing, not sending an email");
 
 					res.Data = resData;
 				}
@@ -234,9 +315,13 @@ namespace insurance_backend.Services
 		private double GetStrategyInterestrate(PensionProduct product, string pensionStrategy)
 		{
 			_logger.LogInformation($"{nameof(GetStrategyInterestrate)} - Getting the interest rate");
-			if (pensionStrategy == "dynamická")
+
+			string? dynamicString = Constants.ResourceManager.GetString("Constant_Dynamic");
+			string? conservativeString = Constants.ResourceManager.GetString("Constant_Consevative");
+
+			if (pensionStrategy == dynamicString!)
 				return product.DynamicPercentage;
-			if (pensionStrategy == "konzervativní")
+			if (pensionStrategy == conservativeString!)
 				return product.ConservativePercentage;
 			return product.BalancedPercentage;
 		}
@@ -250,14 +335,17 @@ namespace insurance_backend.Services
 			double strategyInterestRate
 		)
 		{
+			int year = int.Parse(Constants.ResourceManager.GetString("Constant_Months_In_Year")!);
+			int pensionBaseCoef = int.Parse(Constants.ResourceManager.GetString("Constants_Base_Pension_Coef")!);
+
 			double currentTotalSavings = totalSavings;
 			float totalContribution = userContribution + employerContribution + stateContribution;
 
 			for (int i = 0; i < yearsToRetirement; i++)
 			{
-				float yearlyContribution = totalContribution * 12;
+				float yearlyContribution = totalContribution * year;
 				currentTotalSavings += yearlyContribution;
-				currentTotalSavings *= (1 + strategyInterestRate / 100);
+				currentTotalSavings *= (1 + strategyInterestRate / pensionBaseCoef);
 			}
 
 			return currentTotalSavings;
@@ -272,16 +360,19 @@ namespace insurance_backend.Services
 			double totalValueSaved
 		)
 		{
+			int year = int.Parse(Constants.ResourceManager.GetString("Constant_Months_In_Year")!);
+
 			double currentTotalSavings = totalSavings;
 			float totalContribution = userContribution + employerContribution + stateContribution;
 
 			for (int i = 0; i < yearsToRetirement; i++)
 			{
-				float yearlyContribution = totalContribution * 12;
+				float yearlyContribution = totalContribution * year;
 				currentTotalSavings += yearlyContribution;
 			}
 
 			return totalValueSaved - currentTotalSavings;
 		}
+		#endregion
 	}
 }

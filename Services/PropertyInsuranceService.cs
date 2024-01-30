@@ -5,39 +5,48 @@ using MongoDB.Driver;
 using insurance_backend.Models.Response;
 using insurance_backend.Models.Request.Product;
 using insurance_backend.Enums;
-using static System.Runtime.InteropServices.JavaScript.JSType;
-using insurance_backend.Helpers;
 using MongoDB.Bson;
 using insurance_backend.Interfaces;
+using insurance_backend.Resources;
 
 namespace insurance_backend.Services
 {
-	public class PropertyInsuranceService : IPropertyInsuranceService<ProductInsuranceProduct>
+	public class PropertyInsuranceService : IPropertyInsuranceService<PropertytInsuranceProduct>
 	{
 		ILogger<PensionService> _logger;
-		private readonly IMongoCollection<ProductInsuranceProduct> _propertyInsuranceProductsCollection;
+		private readonly IMongoCollection<PropertytInsuranceProduct> _propertyInsuranceProductsCollection;
+		private readonly IEmailService _emailService;
+		private readonly IProductService<Product> _productService;
 
-		public PropertyInsuranceService(IOptions<DBModel> dbModel, ILogger<PensionService> logger)
+		public PropertyInsuranceService(
+			IOptions<DBModel> dbModel,
+			ILogger<PensionService> logger,
+			IEmailService emailService,
+			IProductService<Product> productService
+		)
 		{
 			_logger = logger;
+			_emailService = emailService;
+			_productService = productService;
+
 			MongoClient client = new MongoClient(dbModel.Value.ConnectionURI);
 			IMongoDatabase db = client.GetDatabase(dbModel.Value.DatabaseName);
-			_propertyInsuranceProductsCollection = db.GetCollection<ProductInsuranceProduct>(dbModel.Value.PropertyInsuranceCollectionName);
+			_propertyInsuranceProductsCollection = db.GetCollection<PropertytInsuranceProduct>(dbModel.Value.PropertyInsuranceCollectionName);
 		}
 
 		#region GET
-		public async Task<BaseResponse<List<ProductInsuranceProduct>>> GetAll()
+		public async Task<BaseResponse<List<PropertytInsuranceProduct>>> GetAll()
 		{
 			_logger.LogInformation($"{nameof(GetAll)} -  Start");
-			BaseResponse<List<ProductInsuranceProduct>> res = new();
+			BaseResponse<List<PropertytInsuranceProduct>> res = new();
 
 			try
 			{
-				List<ProductInsuranceProduct>? products = await _propertyInsuranceProductsCollection.Find(new BsonDocument()).ToListAsync();
+				List<PropertytInsuranceProduct>? products = await _propertyInsuranceProductsCollection.Find(new BsonDocument()).ToListAsync();
 
 				if (products == null || !products.Any())
 				{
-					_logger.LogError($"{nameof(GetAll)} - {Messages.CannotBeValueOf_Error(nameof(GetAll), products)}");
+					_logger.LogError($"{nameof(GetAll)} - could not fetch the products");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Could not find the products";
@@ -59,16 +68,16 @@ namespace insurance_backend.Services
 			return res;
 		}
 
-		public async Task<BaseResponse<ProductInsuranceProduct>> GetOne(string id)
+		public async Task<BaseResponse<PropertytInsuranceProduct>> GetOne(string id)
 		{
 			_logger.LogInformation($"{nameof(GetOne)} - Start");
-			BaseResponse<ProductInsuranceProduct> res = new();
-			FilterDefinition<ProductInsuranceProduct> filter = Builders<ProductInsuranceProduct>.Filter.Eq("Id", id);
+			BaseResponse<PropertytInsuranceProduct> res = new();
+			FilterDefinition<PropertytInsuranceProduct> filter = Builders<PropertytInsuranceProduct>.Filter.Eq("Id", id);
 
 			try
 			{
 				_logger.LogInformation($"{nameof(GetOne)} - Attempting to find the product by id {id}");
-				ProductInsuranceProduct? product = await _propertyInsuranceProductsCollection.Find(filter).FirstAsync();
+				PropertytInsuranceProduct? product = await _propertyInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product == null)
 				{
@@ -97,22 +106,79 @@ namespace insurance_backend.Services
 		}
 		#endregion
 
+		public async Task<BaseResponse<bool>> Create(PropertyInsuranceProductCreateRequest req)
+		{
+			_logger.LogInformation($"{nameof(Create)} - Start");
+			BaseResponse<bool> response = new();
+			Guid id = new();
+
+			ProductCreateRequest baseProduct = new ProductCreateRequest()
+			{
+				Id = id.ToString(),
+				Name = req.Name,
+				Description = req.Description,
+				CompanyName = req.CompanyName,
+				CompanyLogo = req.CompanyLogo,
+				Category = req.Category,
+			};
+
+			PropertytInsuranceProduct product = new PropertytInsuranceProduct()
+			{
+				ProductId = id.ToString(),
+				Name = req.Name,
+				HousePerMeterSqaureCoefficient = req.HousePerMeterSqaureCoefficient,
+				FlatPerMeterSqaureCoefficient = req.FlatPerMeterSqaureCoefficient,
+				GaragePerMeterSqaureCoefficient = req.GaragePerMeterSqaureCoefficient,
+				EquipmentCoefficient = req.EquipmentCoefficient,
+				LiabilityCoefficient = req.LiabilityCoefficient,
+			};
+
+			try
+			{
+				_logger.LogInformation($"{nameof(Create)} - Attempting to store both product and property insurance product");
+				await _productService.Create(baseProduct);
+				await _propertyInsuranceProductsCollection.InsertOneAsync(product);
+
+				response.Data = true;
+				response.Status = HttpStatus.OK;
+				_logger.LogInformation($"{nameof(Create)} - sucesfully stored");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError($"{nameof(Create)} - Something failed while trying to store property insurance product");
+				response.Data = false;
+				response.Status = HttpStatus.INTERNAL_SERVER_ERROR;
+				response.ResponseMessage = ex.Message;
+			}
+
+			_logger.LogInformation($"{nameof(Create)} - End");
+			return response;
+		}
+
 		#region Calculations
 		public async Task<BaseResponse<PropertyInsuranceCalcResponse>> CalculatePropertyInsurance(PropertyInsuranceProductCalcRequest request)
 		{
 			_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Start");
 			BaseResponse<PropertyInsuranceCalcResponse> res = new();
-			FilterDefinition<ProductInsuranceProduct> filter = Builders<ProductInsuranceProduct>.Filter.Eq("productId", request.ProductId);
+			string? productIdString = Constants.ResourceManager.GetString("Constant_Product_Id");
+
+			FilterDefinition<PropertytInsuranceProduct> filter = Builders<PropertytInsuranceProduct>.Filter.Eq(productIdString, request.ProductId);
 
 			try
 			{
 				_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Attempting to fetch the product by product id");
-				ProductInsuranceProduct? product = await _propertyInsuranceProductsCollection.Find(filter).FirstAsync();
+				PropertytInsuranceProduct? product = await _propertyInsuranceProductsCollection.Find(filter).FirstAsync();
 
 				if (product != null)
 				{
 					_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Attempting to calculate the property insurance");
 					double perMeterPropertyPrice = GetCoefficient(request.PropertyType, product);
+
+					string? propertyPriceString = Constants.ResourceManager.GetString("Constants_Property_Price");
+					string? equipmentPriceString = Constants.ResourceManager.GetString("Constants_Equipment_Price");
+					string? liabilityPriceString = Constants.ResourceManager.GetString("Constants_Liability_Price");
+					string? totalPriceString = Constants.ResourceManager.GetString("Constants_Total");
+
 					Dictionary<string, double> calcResult = CalculatePropertyInsurance(
 						request,
 						product.EquipmentCoefficient,
@@ -132,11 +198,35 @@ namespace insurance_backend.Services
 					PropertyInsuranceCalc totalCalc =
 						new()
 						{
-							PropertyPrice = calcResult["PropertyPrice"],
-							EquipmentPrice = calcResult["EquipmentPrice"],
-							LiabilityPrice = calcResult["LiabilityPrice"],
-							TotalPrice = calcResult["Total"],
+							PropertyPrice = calcResult[propertyPriceString!],
+							EquipmentPrice = calcResult[equipmentPriceString!],
+							LiabilityPrice = calcResult[liabilityPriceString!],
+							TotalPrice = calcResult[totalPriceString!],
 						};
+
+					if (!string.IsNullOrEmpty(request.Email))
+					{
+						_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Attempting to send an email");
+
+						string? emailBase = MailTemplates.ResourceManager.GetString("Mail_Property_Insurance_Calculation_Body");
+						string? subject = MailTemplates.ResourceManager.GetString("Mail_Property_Insurance_Calculation_Subject");
+
+						if (!string.IsNullOrEmpty(emailBase) && !string.IsNullOrEmpty(subject))
+						{
+							string email = string.Format(
+								emailBase,
+								product.Name,
+								totalCalc.PropertyPrice,
+								totalCalc.EquipmentPrice,
+								totalCalc.LiabilityPrice,
+								totalCalc.TotalPrice
+							);
+
+							_emailService.SendEmail(email, subject, request.Email);
+						}
+					}
+					else
+						_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Email address is missing, not sending an email");
 
 					PropertyInsuranceCalcResponse response = new() { PerMeterSquareCalc = perMeterCalc, TotalCalc = totalCalc };
 					_logger.LogInformation($"{nameof(CalculatePropertyInsurance)} - Finished calculating the property insurance");
@@ -183,22 +273,30 @@ namespace insurance_backend.Services
 
 			double totalPrice = propertyPrice + equipmentPrice + liabilityPrice;
 
+			string? propertyPriceString = Constants.ResourceManager.GetString("Constants_Property_Price");
+			string? equipmentPriceString = Constants.ResourceManager.GetString("Constants_Equipment_Price");
+			string? liabilityPriceString = Constants.ResourceManager.GetString("Constants_Liability_Price");
+			string? totalPriceString = Constants.ResourceManager.GetString("Constants_Total");
+
 			Dictionary<string, double> result = new Dictionary<string, double>
 			{
-				{ "PropertyPrice", propertyPrice },
-				{ "EquipmentPrice", equipmentPrice },
-				{ "LiabilityPrice", liabilityPrice },
-				{ "Total", totalPrice }
+				{ propertyPriceString!, propertyPrice },
+				{ equipmentPriceString!, equipmentPrice },
+				{ liabilityPriceString!, liabilityPrice },
+				{ totalPriceString!, totalPrice }
 			};
 
 			return result;
 		}
 
-		private double GetCoefficient(string propertyType, ProductInsuranceProduct product)
+		private double GetCoefficient(string propertyType, PropertytInsuranceProduct product)
 		{
-			if (propertyType.Equals("house"))
+			string? propertyTypeHouse = Constants.ResourceManager.GetString("Constants_Property_Type_House");
+			string? propertyTypeFlat = Constants.ResourceManager.GetString("Constants_Property_Type_Flat");
+
+			if (propertyType.Equals(propertyTypeHouse))
 				return product.HousePerMeterSqaureCoefficient;
-			if (propertyType.Equals("flat"))
+			if (propertyType.Equals(propertyTypeFlat))
 				return product.FlatPerMeterSqaureCoefficient;
 			return product.GaragePerMeterSqaureCoefficient;
 		}

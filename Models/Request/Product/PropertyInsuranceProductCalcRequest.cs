@@ -6,6 +6,8 @@ namespace insurance_backend.Models.Request.Product
 	{
 		public string ProductId { get; set; } = string.Empty;
 
+		public string? Email { get; set; } = string.Empty;
+
 		public string PropertyType { get; set; } = string.Empty;
 
 		public string Street { get; set; } = string.Empty;

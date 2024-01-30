@@ -6,6 +6,7 @@ namespace insurance_backend.Interfaces
 	public interface IOrderService<T> : IBaseDBService<T>
 	{
 		Task<BaseResponse<bool>> Create(OrderCreateRequest orderReq);
+
 		Task<BaseResponse<bool>> Delete(OrderDeleteRequest request);
 	}
 }

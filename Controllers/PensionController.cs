@@ -1,12 +1,9 @@
-﻿using insurance_backend.Helpers;
-using insurance_backend.Models.Request.Product;
-using insurance_backend.Models.Response;
+﻿using insurance_backend.Interfaces;
 using insurance_backend.Models;
-using insurance_backend.Services;
-using Microsoft.AspNetCore.Mvc;
 using insurance_backend.Models.Request;
 using insurance_backend.Models.Requests;
-using insurance_backend.Interfaces;
+using insurance_backend.Models.Response;
+using Microsoft.AspNetCore.Mvc;
 
 namespace insurance_backend.Controllers
 {
@@ -38,6 +35,9 @@ namespace insurance_backend.Controllers
 		{
 			_logger.LogInformation($"{nameof(GetAllPensionProducts)} - Attempting to fetch all state pension products");
 
+			if (id == null)
+				throw new ArgumentNullException(nameof(id));
+
 			BaseResponse<PensionProduct> res = await _pensionService.GetOne(id);
 			return res;
 		}
@@ -58,21 +58,8 @@ namespace insurance_backend.Controllers
 		{
 			_logger.LogInformation($"{nameof(GetPensionValue)} - Attempting to fetch all pension values");
 
-			if (
-				request.PensionStrategy.ToLower() != Constants.BALANCED.ToLower()
-				&& request.PensionStrategy.ToLower() != Constants.CONSERVATIVE.ToLower()
-				&& request.PensionStrategy.ToLower() != Constants.DYNAMIC.ToLower()
-			)
-			{
-				_logger.LogError(Messages.CannotBeValueOf_Error(nameof(GetPensionValue), request.PensionStrategy));
-				throw new ArgumentException(Messages.Args_Exception);
-			}
-
 			if (request.UserContribution == 0)
-			{
-				_logger.LogError(Messages.CannotBeValueOf_Error(nameof(GetPensionValue), request.UserContribution));
-				throw new ArgumentException(Messages.Args_Exception);
-			}
+				throw new ArgumentNullException(request.UserContribution.ToString());
 
 			BaseResponse<PensionCalcResponse> res = await _pensionService.CalculatePension(request);
 			return res;

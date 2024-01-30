@@ -1,26 +1,35 @@
 ﻿using insurance_backend.Enums;
-using insurance_backend.Helpers;
 using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Db;
 using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Response;
+using insurance_backend.Resources;
 using Microsoft.CodeAnalysis;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using System.Reflection;
 
 namespace insurance_backend.Services
 {
 	public class LifeInsuranceService : ILifeInsuranceService<LifeInsuranceProduct>
 	{
-		ILogger<PensionService> _logger;
+		private readonly ILogger<PensionService> _logger;
 		private readonly IMongoCollection<LifeInsuranceProduct> _lifeInsuranceProductsCollection;
+		private readonly IEmailService _emailService;
+		private readonly IProductService<Product> _productService;
 
-		public LifeInsuranceService(IOptions<DBModel> dbModel, ILogger<PensionService> logger)
+		public LifeInsuranceService(
+			IOptions<DBModel> dbModel,
+			ILogger<PensionService> logger,
+			IEmailService emailService,
+			IProductService<Product> productService
+		)
 		{
 			_logger = logger;
+			_emailService = emailService;
+			_productService = productService;
+
 			MongoClient client = new MongoClient(dbModel.Value.ConnectionURI);
 			IMongoDatabase db = client.GetDatabase(dbModel.Value.DatabaseName);
 			_lifeInsuranceProductsCollection = db.GetCollection<LifeInsuranceProduct>(dbModel.Value.LifeInsuranceCollectionName);
@@ -38,7 +47,7 @@ namespace insurance_backend.Services
 
 				if (products == null || !products.Any())
 				{
-					_logger.LogError($"{nameof(GetAll)} - {Messages.CannotBeValueOf_Error(nameof(GetAll), products)}");
+					_logger.LogError($"{nameof(GetAll)} - Could not fetch the products");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Could not find the products";
@@ -100,8 +109,9 @@ namespace insurance_backend.Services
 		public async Task<BaseResponse<LifeInsuranceProduct>> GetOneByProductId(string productId)
 		{
 			_logger.LogInformation($"{nameof(GetOneByProductId)} - Start");
+			string? productIdString = Constants.ResourceManager.GetString("Constant_Product_Id");
 			BaseResponse<LifeInsuranceProduct> res = new();
-			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq("ProductId", productId);
+			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq(productIdString, productId);
 
 			try
 			{
@@ -173,6 +183,59 @@ namespace insurance_backend.Services
 		}
 		#endregion
 
+		public async Task<BaseResponse<bool>> Create(LifeInsuranceProductCreateRequest req)
+		{
+			_logger.LogInformation($"{nameof(Create)} - Start");
+			BaseResponse<bool> response = new();
+			Guid id = new();
+
+			ProductCreateRequest baseProduct = new ProductCreateRequest()
+			{
+				Id = id.ToString(),
+				Name = req.Name,
+				Description = req.Description,
+				CompanyName = req.CompanyName,
+				CompanyLogo = req.CompanyLogo,
+				Category = req.Category,
+			};
+
+			LifeInsuranceProduct lifeInsuranceProduct = new LifeInsuranceProduct()
+			{
+				ProductId = id.ToString(),
+				Name = req.Name,
+				DeathCoefficient = req.DeathCoefficient,
+				InjuriesCoefficient = req.InjuriesCoefficient,
+				DiseasesCoefficient = req.DiseasesCoefficient,
+				WorkIncapacityCoefficient = req.WorkIncapacityCoefficient,
+				HospitalizationCoefficient = req.HospitalizationCoefficient,
+				InvalidityCoefficient = req.InvalidityCoefficient,
+				SmokerCoefficient = req.SmokerCoefficient,
+				SportCoefficient = req.SportCoefficient,
+				SportCoefficientP = req.SportCoefficientP,
+			};
+
+			try
+			{
+				_logger.LogInformation($"{nameof(Create)} - Attempting to store both product and life insurance product");
+				await _productService.Create(baseProduct);
+				await _lifeInsuranceProductsCollection.InsertOneAsync(lifeInsuranceProduct);
+
+				response.Data = true;
+				response.Status = HttpStatus.OK;
+				_logger.LogInformation($"{nameof(Create)} - sucesfully stored");
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError($"{nameof(Create)} - Something failed while trying to store life insurance product");
+				response.Data = false;
+				response.Status = HttpStatus.INTERNAL_SERVER_ERROR;
+				response.ResponseMessage = ex.Message;
+			}
+
+			_logger.LogInformation($"{nameof(Create)} - End");
+			return response;
+		}
+
 		#region Calculator
 		public async Task<BaseResponse<LifeInsuranceCalcResponse>> CalculatePrice(LifeInsuranceProductCalcRequest productData)
 		{
@@ -184,6 +247,8 @@ namespace insurance_backend.Services
 			{
 				_logger.LogInformation($"{nameof(CalculatePrice)} - Attempting to find a product by product id: {productData.ProductId}");
 				LifeInsuranceProduct? product = await _lifeInsuranceProductsCollection.Find(filter).FirstAsync();
+				string? yearlyAttr = Constants.ResourceManager.GetString("Constant_Yearly");
+				string? monthyAttr = Constants.ResourceManager.GetString("Constant_Monthly");
 
 				if (product != null)
 				{
@@ -260,42 +325,64 @@ namespace insurance_backend.Services
 					);
 
 					InsurancePrice yearlyLifeInsurance = new();
-					yearlyLifeInsurance.DeathInsurancePrice = deathCalcResult["yearly"];
-					yearlyLifeInsurance.InjuriesInsurancePrice = injuryCalcResult["yearly"];
-					yearlyLifeInsurance.DiseasesInsurancePrice = diseaseCalcResult["yearly"];
-					yearlyLifeInsurance.WorkIncapacityInsurancePrice = workIncapacityResult["yearly"];
-					yearlyLifeInsurance.HospitalizationInsurancePrice = hospitalizationCalcResult["yearly"];
-					yearlyLifeInsurance.InvalidityInsurancePrice = invalidityCalcResult["yearly"];
+					yearlyLifeInsurance.DeathInsurancePrice = deathCalcResult[yearlyAttr!];
+					yearlyLifeInsurance.InjuriesInsurancePrice = injuryCalcResult[yearlyAttr!];
+					yearlyLifeInsurance.DiseasesInsurancePrice = diseaseCalcResult[yearlyAttr!];
+					yearlyLifeInsurance.WorkIncapacityInsurancePrice = workIncapacityResult[yearlyAttr!];
+					yearlyLifeInsurance.HospitalizationInsurancePrice = hospitalizationCalcResult[yearlyAttr!];
+					yearlyLifeInsurance.InvalidityInsurancePrice = invalidityCalcResult[yearlyAttr!];
 					yearlyLifeInsurance.TotalInsurancePrice = new[]
 					{
-						deathCalcResult["yearly"],
-						injuryCalcResult["yearly"],
-						diseaseCalcResult["yearly"],
-						workIncapacityResult["yearly"],
-						hospitalizationCalcResult["yearly"],
-						invalidityCalcResult["yearly"]
+						deathCalcResult[yearlyAttr!],
+						injuryCalcResult[yearlyAttr!],
+						diseaseCalcResult[yearlyAttr!],
+						workIncapacityResult[yearlyAttr!],
+						hospitalizationCalcResult[yearlyAttr!],
+						invalidityCalcResult[yearlyAttr!]
 					}.Sum();
 
 					InsurancePrice monthlyLifeInsurance = new();
-					monthlyLifeInsurance.DeathInsurancePrice = deathCalcResult["monthly"];
-					monthlyLifeInsurance.InjuriesInsurancePrice = injuryCalcResult["monthly"];
-					monthlyLifeInsurance.DiseasesInsurancePrice = diseaseCalcResult["monthly"];
-					monthlyLifeInsurance.WorkIncapacityInsurancePrice = workIncapacityResult["monthly"];
-					monthlyLifeInsurance.HospitalizationInsurancePrice = hospitalizationCalcResult["monthly"];
-					monthlyLifeInsurance.InvalidityInsurancePrice = invalidityCalcResult["monthly"];
+					monthlyLifeInsurance.DeathInsurancePrice = deathCalcResult[monthyAttr!];
+					monthlyLifeInsurance.InjuriesInsurancePrice = injuryCalcResult[monthyAttr!];
+					monthlyLifeInsurance.DiseasesInsurancePrice = diseaseCalcResult[monthyAttr!];
+					monthlyLifeInsurance.WorkIncapacityInsurancePrice = workIncapacityResult[monthyAttr!];
+					monthlyLifeInsurance.HospitalizationInsurancePrice = hospitalizationCalcResult[monthyAttr!];
+					monthlyLifeInsurance.InvalidityInsurancePrice = invalidityCalcResult[monthyAttr!];
 					monthlyLifeInsurance.TotalInsurancePrice = new[]
 					{
-						deathCalcResult["monthly"],
-						injuryCalcResult["monthly"],
-						diseaseCalcResult["monthly"],
-						workIncapacityResult["monthly"],
-						hospitalizationCalcResult["monthly"],
-						invalidityCalcResult["monthly"]
+						deathCalcResult[monthyAttr!],
+						injuryCalcResult[monthyAttr!],
+						diseaseCalcResult[monthyAttr!],
+						workIncapacityResult[monthyAttr!],
+						hospitalizationCalcResult[monthyAttr!],
+						invalidityCalcResult[monthyAttr!]
 					}.Sum();
 
 					LifeInsuranceCalcResponse result = new();
 					result.YearlyLifeInsurance = yearlyLifeInsurance;
 					result.MonthlyLifeInsurance = monthlyLifeInsurance;
+
+					if (!string.IsNullOrEmpty(productData.Email))
+					{
+						_logger.LogInformation($"{nameof(CalculatePrice)} - Attempting to send an email");
+
+						string? emailBase = MailTemplates.ResourceManager.GetString("Mail_Life_Insurance_Calculation_Body");
+						string? subject = MailTemplates.ResourceManager.GetString("Mail_Life_Insurance_Calculation_Subject");
+
+						if (!string.IsNullOrEmpty(emailBase) && !string.IsNullOrEmpty(subject))
+						{
+							string email = string.Format(
+								emailBase,
+								product.Name,
+								monthlyLifeInsurance.TotalInsurancePrice,
+								monthlyLifeInsurance.TotalInsurancePrice
+							);
+
+							_emailService.SendEmail(email, subject, productData.Email);
+						}
+					}
+					else
+						_logger.LogInformation($"{nameof(CalculatePrice)} - Email address is missing, not sending an email");
 
 					_logger.LogInformation($"{nameof(CalculatePrice)} - Finished calculating all the prices");
 					res.Data = result;
@@ -331,20 +418,24 @@ namespace insurance_backend.Services
 			double sportCoef
 		)
 		{
-			int baseValue = isOnetimePayof ? 1000 : 1;
+			int baseCoef = Int32.Parse(Constants.ResourceManager.GetString("Constants_Base_Life_Insurance_Coef")!);
+			int additiveDivisionCoef = Int32.Parse(Constants.ResourceManager.GetString("Constanst_Base_Life_Insurance_Additive_Divison_Coef")!);
+			int year = Int32.Parse(Constants.ResourceManager.GetString("Constant_Months_In_Year")!);
+
+			int baseValue = isOnetimePayof ? baseCoef : 1;
 			double yearlyBase = (amount / baseValue) * coef;
 			double smokerAdditive = 0;
 			double sportAdditive = 0;
 			if (isSmoker)
-				smokerAdditive = yearlyBase * (1 + smokeCoef / 100) - yearlyBase;
+				smokerAdditive = yearlyBase * (1 + smokeCoef / additiveDivisionCoef) - yearlyBase;
 			if (doesSport)
-				sportAdditive = yearlyBase * (1 + sportCoef / 100) - yearlyBase;
+				sportAdditive = yearlyBase * (1 + sportCoef / additiveDivisionCoef) - yearlyBase;
 
 			yearlyBase += smokerAdditive + sportAdditive;
 
 			int totalYearly = Convert.ToInt32(yearlyBase);
 
-			Dictionary<string, int> res = new Dictionary<string, int> { { "yearly", totalYearly }, { "monthly", totalYearly / 12 } };
+			Dictionary<string, int> res = new Dictionary<string, int> { { "yearly", totalYearly }, { "monthly", totalYearly / year } };
 
 			return res;
 		}
@@ -360,12 +451,15 @@ namespace insurance_backend.Services
 			InvalidityLevel invalidityLevel
 		)
 		{
+			int year = Int32.Parse(Constants.ResourceManager.GetString("Constant_Months_In_Year")!);
+			int invalidityCoef = Int32.Parse(Constants.ResourceManager.GetString("Constants_Base_Life_Insurance_Invalidity_Coef")!);
+
 			Dictionary<string, int> baseRes = CalculateItemPrice(isOnetimePayof, amount, coef, isSmoker, smokeCoef, doesSport, sportCoef);
 			int yearlyPrice = baseRes["yearly"];
-			int additive = (1 + ((int)invalidityLevel * 2 / 10));
+			int additive = (1 + ((int)invalidityLevel * invalidityCoef / 10));
 			int totalYearly = yearlyPrice * additive;
 
-			Dictionary<string, int> res = new Dictionary<string, int> { { "yearly", totalYearly }, { "monthly", totalYearly / 12 } };
+			Dictionary<string, int> res = new Dictionary<string, int> { { "yearly", totalYearly }, { "monthly", totalYearly / year } };
 
 			return res;
 		}
@@ -382,12 +476,16 @@ namespace insurance_backend.Services
 			int HospitalizationLength
 		)
 		{
+			string? yearlyAttr = Constants.ResourceManager.GetString("Constant_Yearly");
+			int baseCoef = Int32.Parse(Constants.ResourceManager.GetString("Constants_Base_Life_Insurance_Coef")!);
+			int year = Int32.Parse(Constants.ResourceManager.GetString("Constant_Months_In_Year")!);
+
 			Dictionary<string, int> baseRes = CalculateItemPrice(isOnetimePayof, amount, coef, isSmoker, smokeCoef, doesSport, sportCoef);
-			int yearlyPrice = baseRes["yearly"];
-			int additive = (HospitalizationLength / 1000) + 1;
+			int yearlyPrice = baseRes[yearlyAttr!];
+			int additive = (HospitalizationLength / baseCoef) + 1;
 			int totalYearly = yearlyPrice * additive;
 
-			Dictionary<string, int> res = new Dictionary<string, int> { { "yearly", totalYearly }, { "monthly", totalYearly / 12 } };
+			Dictionary<string, int> res = new Dictionary<string, int> { { "yearly", totalYearly }, { "monthly", totalYearly / year } };
 
 			return res;
 		}

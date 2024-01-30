@@ -5,6 +5,7 @@ using Microsoft.Extensions.Options;
 using MimeKit.Text;
 using MimeKit;
 using insurance_backend.Interfaces;
+using System.Text.Encodings.Web;
 
 namespace insurance_backend.Services
 {

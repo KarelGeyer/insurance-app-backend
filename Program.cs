@@ -11,15 +11,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<DBModel>(builder.Configuration.GetSection("MongoDB"));
 
 // HTTP services
-builder.Services.AddSingleton<IPensionService<PensionProduct>, PensionService>();
-builder.Services.AddSingleton<IProductService<Product>, ProductService>();
-builder.Services.AddSingleton<ILifeInsuranceService<LifeInsuranceProduct>, LifeInsuranceService>();
-builder.Services.AddSingleton<IPropertyInsuranceService<ProductInsuranceProduct>, PropertyInsuranceService>();
-builder.Services.AddSingleton<IOrderService<Order>, OrdersService>();
+builder.Services.AddScoped<IPensionService<PensionProduct>, PensionService>();
+builder.Services.AddScoped<IProductService<Product>, ProductService>();
+builder.Services.AddScoped<ILifeInsuranceService<LifeInsuranceProduct>, LifeInsuranceService>();
+builder.Services.AddScoped<IPropertyInsuranceService<PropertytInsuranceProduct>, PropertyInsuranceService>();
+builder.Services.AddScoped<IOrderService<Order>, OrdersService>();
 
 // Email service
 builder.Services.Configure<MailConfig>(builder.Configuration.GetSection("MailConfig"));
-builder.Services.AddSingleton<IEmailService, EmailService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // Add additional services
 builder.Services.AddCors();

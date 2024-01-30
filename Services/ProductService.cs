@@ -1,5 +1,4 @@
 ﻿using insurance_backend.Enums;
-using insurance_backend.Helpers;
 using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Db;
@@ -36,7 +35,7 @@ namespace insurance_backend.Services
 
 				if (products == null || !products.Any())
 				{
-					_logger.LogError($"{nameof(GetAll)} - {Messages.CannotBeValueOf_Error(nameof(GetAll), products)}");
+					_logger.LogError($"{nameof(GetAll)} - failed to get all products");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Could not find the products";
@@ -73,7 +72,7 @@ namespace insurance_backend.Services
 
 				if (product == null)
 				{
-					_logger.LogError($"{nameof(GetOne)} - {Messages.CannotBeValueOf_Error(nameof(GetOne), product)}");
+					_logger.LogError($"{nameof(GetOne)} - failed to get product");
 					res.Data = null;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Could not find the product";
@@ -104,9 +103,9 @@ namespace insurance_backend.Services
 			Product newProduct =
 				new()
 				{
+					Id = product.Id,
 					Name = product.Name,
 					Description = product.Description,
-					Price = product.Price,
 					CompanyLogo = product.CompanyLogo,
 					CompanyName = product.CompanyName,
 					Category = product.Category,
@@ -145,7 +144,7 @@ namespace insurance_backend.Services
 
 				if (product == null)
 				{
-					_logger.LogError($"{nameof(GetOne)} - {Messages.CannotBeValueOf_Error(nameof(GetOne), product)}");
+					_logger.LogError($"{nameof(GetOne)} - failed to delete a product");
 					res.Data = false;
 					res.Status = HttpStatus.NOT_FOUND;
 					res.ResponseMessage = "Could not find the product";

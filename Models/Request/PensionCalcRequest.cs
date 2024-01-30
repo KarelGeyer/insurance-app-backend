@@ -7,6 +7,8 @@ namespace insurance_backend.Models.Requests
 	{
 		public string ProductId { get; set; }
 
+		public string? Email { get; set; }
+
 		public float CurrentSavings { get; set; } = 0;
 
 		public float UserContribution { get; set; } = 0;

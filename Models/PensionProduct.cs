@@ -14,10 +14,6 @@ namespace insurance_backend.Models
 		[BsonRepresentation(BsonType.String)]
 		public string ProductId { get; set; }
 
-		[BsonElement("price")]
-		[BsonRepresentation(BsonType.Int32)]
-		public int Price { get; set; }
-
 		[BsonElement("name")]
 		[BsonRepresentation(BsonType.String)]
 		public string Name { get; set; }

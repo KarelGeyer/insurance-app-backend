@@ -1,14 +1,9 @@
 ﻿using insurance_backend.Enums;
+using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Response;
-using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.CodeAnalysis;
-using System.Drawing;
-using System;
-using insurance_backend.Helpers;
-using insurance_backend.Interfaces;
 
 namespace insurance_backend.Controllers
 {
@@ -40,10 +35,7 @@ namespace insurance_backend.Controllers
 			_logger.LogInformation($"{nameof(GetProductById)} - Start");
 
 			if (productId == null)
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(productId)}");
 				throw new ArgumentNullException(nameof(productId));
-			}
 
 			_logger.LogInformation($"{nameof(GetProductById)} - Attempting to fetch products with id {productId}");
 			return await _productService.GetOne(productId);
@@ -56,37 +48,15 @@ namespace insurance_backend.Controllers
 			_logger.LogInformation($"{nameof(GetProductById)} - Start");
 
 			if (string.IsNullOrEmpty(product.Name))
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(product.Name)}");
 				throw new ArgumentNullException(nameof(product.Name));
-			}
 			if (string.IsNullOrEmpty(product.Description))
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(product.Description)}");
 				throw new ArgumentNullException(nameof(product.Description));
-			}
 			if (string.IsNullOrEmpty(product.CompanyName))
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(product.CompanyName)}");
 				throw new ArgumentNullException(nameof(product.CompanyName));
-			}
 			if (string.IsNullOrEmpty(product.CompanyLogo))
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(product.CompanyLogo)}");
 				throw new ArgumentNullException(nameof(product.CompanyLogo));
-			}
-			if (product.Price.Equals(0))
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(product.Price)}");
-				throw new ArgumentNullException(nameof(product.Price));
-			}
 			if (Enum.IsDefined(typeof(ProductCategory), product.Category))
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(product.Category)}");
 				throw new ArgumentNullException(nameof(product.Category));
-			}
-
-			_logger.LogInformation($"{nameof(GetProductById)} - Attempting to create a new product");
 
 			return await _productService.Create(product);
 		}
@@ -96,10 +66,7 @@ namespace insurance_backend.Controllers
 		public async Task<BaseResponse<bool>> DeleteProduct(string productId)
 		{
 			if (productId == null)
-			{
-				_logger.LogError($"{nameof(GetProductById)} - {Messages.MissingProperty_Error(productId)}");
 				throw new ArgumentNullException(nameof(productId));
-			}
 
 			_logger.LogInformation($"{nameof(GetProductById)} - Attempting to delete a product with id {productId}");
 			return await _productService.Delete(productId);
