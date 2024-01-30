@@ -1,7 +1,9 @@
-﻿using insurance_backend.Interfaces;
+﻿using insurance_backend.Enums;
+using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Response;
+using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace insurance_backend.Controllers
@@ -39,6 +41,41 @@ namespace insurance_backend.Controllers
 
 			BaseResponse<PropertytInsuranceProduct> res = await _propertyInsuranceService.GetOne(id);
 			return res;
+		}
+
+		[HttpPost]
+		[Route("action")]
+		public async Task<BaseResponse<bool>> CreatePropertyInsuranceProduct(PropertyInsuranceProductCreateRequest request)
+		{
+			_logger.LogInformation($"{nameof(CreatePropertyInsuranceProduct)} - Attempting to create a life insurance product");
+
+			if (string.IsNullOrEmpty(request.Name))
+				throw new ArgumentNullException(nameof(request.Name));
+			if (string.IsNullOrEmpty(request.Description))
+				throw new ArgumentNullException(nameof(request.Description));
+			if (string.IsNullOrEmpty(request.CompanyName))
+				throw new ArgumentNullException(nameof(request.CompanyName));
+			if (string.IsNullOrEmpty(request.CompanyLogo))
+				throw new ArgumentNullException(nameof(request.CompanyLogo));
+			if (
+				request.Category != ProductCategory.Pension
+				&& request.Category != ProductCategory.PropertyInsurance
+				&& request.Category != ProductCategory.LifeInsurance
+			)
+				throw new ArgumentNullException(nameof(request.CompanyLogo));
+			if (request.HousePerMeterSqaureCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.HousePerMeterSqaureCoefficient));
+			if (request.FlatPerMeterSqaureCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.FlatPerMeterSqaureCoefficient));
+			if (request.GaragePerMeterSqaureCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.GaragePerMeterSqaureCoefficient));
+			if (request.EquipmentCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.EquipmentCoefficient));
+			if (request.LiabilityCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.LiabilityCoefficient));
+
+			BaseResponse<bool> response = await _propertyInsuranceService.Create(request);
+			return response;
 		}
 
 		[HttpPost]

@@ -6,5 +6,7 @@ namespace insurance_backend.Interfaces
 	public interface IPropertyInsuranceService<T> : IBaseDBService<T>
 	{
 		Task<BaseResponse<PropertyInsuranceCalcResponse>> CalculatePropertyInsurance(PropertyInsuranceProductCalcRequest request);
+
+		Task<BaseResponse<bool>> Create(PropertyInsuranceProductCreateRequest request);
 	}
 }

@@ -5,6 +5,8 @@ using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 using insurance_backend.Interfaces;
 using Microsoft.CodeAnalysis;
+using Microsoft.IdentityModel.Tokens;
+using insurance_backend.Enums;
 
 namespace insurance_backend.Controllers
 {
@@ -68,6 +70,49 @@ namespace insurance_backend.Controllers
 
 			BaseResponse<string> res = await _lifeInsuranceService.GetProductIdFromId(id);
 			return res;
+		}
+
+		[HttpPost]
+		[Route("action")]
+		public async Task<BaseResponse<bool>> CreateLifeInsuranceProduct(LifeInsuranceProductCreateRequest request)
+		{
+			_logger.LogInformation($"{nameof(CreateLifeInsuranceProduct)} - Attempting to create a life insurance product");
+
+			if (string.IsNullOrEmpty(request.Name))
+				throw new ArgumentNullException(nameof(request.Name));
+			if (string.IsNullOrEmpty(request.Description))
+				throw new ArgumentNullException(nameof(request.Description));
+			if (string.IsNullOrEmpty(request.CompanyName))
+				throw new ArgumentNullException(nameof(request.CompanyName));
+			if (string.IsNullOrEmpty(request.CompanyLogo))
+				throw new ArgumentNullException(nameof(request.CompanyLogo));
+			if (
+				request.Category != ProductCategory.Pension
+				&& request.Category != ProductCategory.PropertyInsurance
+				&& request.Category != ProductCategory.LifeInsurance
+			)
+				throw new ArgumentNullException(nameof(request.CompanyLogo));
+			if (request.DeathCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.DeathCoefficient));
+			if (request.InjuriesCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.InjuriesCoefficient));
+			if (request.DiseasesCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.DiseasesCoefficient));
+			if (request.WorkIncapacityCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.WorkIncapacityCoefficient));
+			if (request.HospitalizationCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.HospitalizationCoefficient));
+			if (request.InvalidityCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.InvalidityCoefficient));
+			if (request.SmokerCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.SmokerCoefficient));
+			if (request.SportCoefficient == 0)
+				throw new ArgumentNullException(nameof(request.SportCoefficient));
+			if (request.SportCoefficientP == 0)
+				throw new ArgumentNullException(nameof(request.SportCoefficientP));
+
+			BaseResponse<bool> response = await _lifeInsuranceService.Create(request);
+			return response;
 		}
 
 		[HttpPost]

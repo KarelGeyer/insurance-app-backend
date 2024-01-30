@@ -1,8 +1,11 @@
-﻿using insurance_backend.Interfaces;
+﻿using insurance_backend.Enums;
+using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Request;
+using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Requests;
 using insurance_backend.Models.Response;
+using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace insurance_backend.Controllers
@@ -50,6 +53,37 @@ namespace insurance_backend.Controllers
 
 			BaseResponse<List<StateContributionValue>> res = await _pensionService.GetStateContributions();
 			return res;
+		}
+
+		[HttpPost]
+		[Route("action")]
+		public async Task<BaseResponse<bool>> CreatePensionSchemeProduct(PensionProductCreateRequest request)
+		{
+			_logger.LogInformation($"{nameof(CreatePensionSchemeProduct)} - Attempting to create a life insurance product");
+
+			if (string.IsNullOrEmpty(request.Name))
+				throw new ArgumentNullException(nameof(request.Name));
+			if (string.IsNullOrEmpty(request.Description))
+				throw new ArgumentNullException(nameof(request.Description));
+			if (string.IsNullOrEmpty(request.CompanyName))
+				throw new ArgumentNullException(nameof(request.CompanyName));
+			if (string.IsNullOrEmpty(request.CompanyLogo))
+				throw new ArgumentNullException(nameof(request.CompanyLogo));
+			if (
+				request.Category != ProductCategory.Pension
+				&& request.Category != ProductCategory.PropertyInsurance
+				&& request.Category != ProductCategory.LifeInsurance
+			)
+				throw new ArgumentNullException(nameof(request.CompanyLogo));
+			if (request.DynamicPercentage == 0)
+				throw new ArgumentNullException(nameof(request.DynamicPercentage));
+			if (request.ConservativePercentage == 0)
+				throw new ArgumentNullException(nameof(request.ConservativePercentage));
+			if (request.BalancedPercentage == 0)
+				throw new ArgumentNullException(nameof(request.BalancedPercentage));
+
+			BaseResponse<bool> response = await _pensionService.Create(request);
+			return response;
 		}
 
 		[HttpPost]
