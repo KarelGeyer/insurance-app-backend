@@ -3,7 +3,7 @@ using MongoDB.Bson;
 
 namespace insurance_backend.Models
 {
-	public class ProductInsuranceProduct
+	public class PropertytInsuranceProduct
 	{
 		[BsonId]
 		[BsonRepresentation(BsonType.ObjectId)]
