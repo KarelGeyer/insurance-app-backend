@@ -47,34 +47,23 @@ namespace insurance_backend.Controllers
 		{
 			_logger.LogInformation($"{nameof(CreateOrder)} - Start");
 
-			Order order = orderReq.Order;
-
 			if (string.IsNullOrEmpty(orderReq.EmailAddress))
 				throw new ArgumentNullException(nameof(orderReq.EmailAddress));
 
-			if (string.IsNullOrEmpty(order.ProductId))
-				throw new ArgumentNullException(nameof(order.ProductId));
+			if (string.IsNullOrEmpty(orderReq.ProductId))
+				throw new ArgumentNullException(nameof(orderReq.ProductId));
 
-			if (string.IsNullOrEmpty(order.ProductName))
-				throw new ArgumentNullException(nameof(order.ProductName));
+			if (string.IsNullOrEmpty(orderReq.Name))
+				throw new ArgumentNullException(nameof(orderReq.Name));
 
-			if (string.IsNullOrEmpty(order.Name))
-				throw new ArgumentNullException(nameof(order.Name));
+			if (string.IsNullOrEmpty(orderReq.Surname))
+				throw new ArgumentNullException(nameof(orderReq.Surname));
 
-			if (string.IsNullOrEmpty(order.Surname))
-				throw new ArgumentNullException(nameof(order.Surname));
+			if (orderReq.YearlyPrice.Equals(0))
+				throw new ArgumentNullException(nameof(orderReq.YearlyPrice));
 
-			if (order.Category.Equals(0))
-				throw new ArgumentNullException(nameof(order.Category));
-
-			if (Enum.IsDefined(typeof(ProductCategory), order.Category))
-				throw new ArgumentNullException(nameof(order.Category));
-
-			if (order.YearlyPrice.Equals(0))
-				throw new ArgumentNullException(nameof(order.YearlyPrice));
-
-			if (order.Date.Equals(DateTime.MinValue))
-				throw new ArgumentNullException(nameof(order.Date));
+			if (orderReq.Date.Equals(DateTime.MinValue))
+				throw new ArgumentNullException(nameof(orderReq.Date));
 
 			_logger.LogInformation($"{nameof(CreateOrder)} - Attempting to create a new order");
 

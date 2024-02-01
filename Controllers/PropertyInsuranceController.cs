@@ -23,9 +23,9 @@ namespace insurance_backend.Controllers
 
 		[HttpGet]
 		[Route("[action]")]
-		public async Task<BaseResponse<List<PropertytInsuranceProduct>>> GetPropertyInsuraceProducts()
+		public async Task<BaseResponse<List<PropertytInsuranceProduct>>> GetPropertyInsuranceProducts()
 		{
-			_logger.LogInformation($"{nameof(GetPropertyInsuraceProducts)} - Attempting to fetch all life insurance product details");
+			_logger.LogInformation($"{nameof(GetPropertyInsuranceProducts)} - Attempting to fetch all life insurance product details");
 			BaseResponse<List<PropertytInsuranceProduct>> res = await _propertyInsuranceService.GetAll();
 			return res;
 		}
@@ -34,7 +34,7 @@ namespace insurance_backend.Controllers
 		[Route("[action]")]
 		public async Task<BaseResponse<PropertytInsuranceProduct>> GetPropertyInsuranceProduct(string id)
 		{
-			_logger.LogInformation($"{nameof(GetPropertyInsuraceProducts)} - Attempting to fetch life insurance produc details");
+			_logger.LogInformation($"{nameof(GetPropertyInsuranceProduct)} - Attempting to fetch life insurance produc details");
 
 			if (string.IsNullOrEmpty(id))
 				throw new ArgumentNullException(id);
@@ -44,8 +44,8 @@ namespace insurance_backend.Controllers
 		}
 
 		[HttpPost]
-		[Route("action")]
-		public async Task<BaseResponse<bool>> CreatePropertyInsuranceProduct(PropertyInsuranceProductCreateRequest request)
+		[Route("[action]")]
+		public async Task<BaseResponse<bool>> CreatePropertyInsuranceProduct([FromBody] PropertyInsuranceProductCreateRequest request)
 		{
 			_logger.LogInformation($"{nameof(CreatePropertyInsuranceProduct)} - Attempting to create a life insurance product");
 
@@ -56,12 +56,6 @@ namespace insurance_backend.Controllers
 			if (string.IsNullOrEmpty(request.CompanyName))
 				throw new ArgumentNullException(nameof(request.CompanyName));
 			if (string.IsNullOrEmpty(request.CompanyLogo))
-				throw new ArgumentNullException(nameof(request.CompanyLogo));
-			if (
-				request.Category != ProductCategory.Pension
-				&& request.Category != ProductCategory.PropertyInsurance
-				&& request.Category != ProductCategory.LifeInsurance
-			)
 				throw new ArgumentNullException(nameof(request.CompanyLogo));
 			if (request.HousePerMeterSqaureCoefficient == 0)
 				throw new ArgumentNullException(nameof(request.HousePerMeterSqaureCoefficient));
@@ -76,6 +70,21 @@ namespace insurance_backend.Controllers
 
 			BaseResponse<bool> response = await _propertyInsuranceService.Create(request);
 			return response;
+		}
+
+		[HttpDelete]
+		[Route("[action]")]
+		public async Task<BaseResponse<bool>> DeletepropertyInsuranceProduct(string id)
+		{
+			_logger.LogInformation(
+				$"{nameof(DeletepropertyInsuranceProduct)} - Attempting to retrieve a calculation for life insurance using product with id {id}"
+			);
+
+			if (string.IsNullOrEmpty(id))
+				throw new ArgumentNullException(nameof(id));
+
+			BaseResponse<bool> res = await _propertyInsuranceService.Delete(id);
+			return res;
 		}
 
 		[HttpPost]

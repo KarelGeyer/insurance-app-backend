@@ -105,89 +105,13 @@ namespace insurance_backend.Services
 			_logger.LogInformation($"{nameof(GetOne)} - End");
 			return res;
 		}
-
-		public async Task<BaseResponse<LifeInsuranceProduct>> GetOneByProductId(string productId)
-		{
-			_logger.LogInformation($"{nameof(GetOneByProductId)} - Start");
-			string? productIdString = Constants.ResourceManager.GetString("Constant_Product_Id");
-			BaseResponse<LifeInsuranceProduct> res = new();
-			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq(productIdString, productId);
-
-			try
-			{
-				_logger.LogInformation($"{nameof(GetOneByProductId)} - Attempting to find a product by product id: {productId}");
-				LifeInsuranceProduct? product = await _lifeInsuranceProductsCollection.Find(filter).FirstAsync();
-
-				if (product == null)
-				{
-					_logger.LogError($"{nameof(GetOneByProductId)} - product by product id: {productId} was not found");
-					res.Data = null;
-					res.Status = HttpStatus.NOT_FOUND;
-					res.ResponseMessage = $"Could not find the product by Id {productId}";
-				}
-				else
-				{
-					_logger.LogError($"{nameof(GetOneByProductId)} - succesfully found a product by product id: {productId}");
-					res.Data = product;
-					res.Status = HttpStatus.OK;
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError($"{nameof(GetOneByProductId)} - error apeared while trying to find product by product id: {productId}");
-				res.Data = null;
-				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
-				res.ResponseMessage = ex.Message;
-			}
-
-			_logger.LogInformation($"{nameof(GetOneByProductId)} - End");
-
-			return res;
-		}
-
-		public async Task<BaseResponse<string>> GetProductIdFromId(string id)
-		{
-			_logger.LogInformation($"{nameof(GetProductIdFromId)} - Start");
-			BaseResponse<string> res = new();
-			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq("Id", id);
-
-			try
-			{
-				_logger.LogInformation($"{nameof(GetProductIdFromId)} - Attempting to find a product by id: {id}");
-				LifeInsuranceProduct? product = await _lifeInsuranceProductsCollection.Find(filter).FirstAsync();
-
-				if (product == null)
-				{
-					_logger.LogError($"{nameof(GetProductIdFromId)} - product by id: {id} was not found");
-					res.Data = null;
-					res.Status = HttpStatus.NOT_FOUND;
-					res.ResponseMessage = $"Could not find the product by Id {id}";
-				}
-				else
-				{
-					_logger.LogInformation($"{nameof(GetProductIdFromId)} - Succesfully retrieved a product by id: {id}");
-					res.Data = product.ProductId;
-					res.Status = HttpStatus.OK;
-				}
-			}
-			catch (Exception ex)
-			{
-				_logger.LogError($"{nameof(GetProductIdFromId)} - error apeared while trying to find product by id: {id}");
-				res.Data = null;
-				res.Status = HttpStatus.INTERNAL_SERVER_ERROR;
-				res.ResponseMessage = ex.Message;
-			}
-
-			_logger.LogInformation($"{nameof(GetProductIdFromId)} - End");
-			return res;
-		}
 		#endregion
 
 		public async Task<BaseResponse<bool>> Create(LifeInsuranceProductCreateRequest req)
 		{
 			_logger.LogInformation($"{nameof(Create)} - Start");
 			BaseResponse<bool> response = new();
-			Guid id = new();
+			ObjectId id = ObjectId.GenerateNewId();
 
 			ProductCreateRequest baseProduct = new ProductCreateRequest()
 			{
@@ -196,7 +120,7 @@ namespace insurance_backend.Services
 				Description = req.Description,
 				CompanyName = req.CompanyName,
 				CompanyLogo = req.CompanyLogo,
-				Category = req.Category,
+				Category = ProductCategory.LifeInsurance,
 			};
 
 			LifeInsuranceProduct lifeInsuranceProduct = new LifeInsuranceProduct()
@@ -233,6 +157,35 @@ namespace insurance_backend.Services
 			}
 
 			_logger.LogInformation($"{nameof(Create)} - End");
+			return response;
+		}
+
+		public async Task<BaseResponse<bool>> Delete(string id)
+		{
+			_logger.LogInformation($"{nameof(Delete)} - Start");
+			BaseResponse<bool> response = new();
+			FilterDefinition<LifeInsuranceProduct> filter = Builders<LifeInsuranceProduct>.Filter.Eq("ProductId", id);
+
+			try
+			{
+				_logger.LogInformation(
+					$"{nameof(Delete)} - Product found, attempting to delete both product and the pension scheme product documents"
+				);
+				await _productService.Delete(id);
+				await _lifeInsuranceProductsCollection.FindOneAndDeleteAsync<LifeInsuranceProduct>(filter);
+
+				response.Data = true;
+				response.Status = HttpStatus.OK;
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError($"{nameof(Delete)} - Something went wrong when trying to delete a product");
+				response.Data = false;
+				response.Status = HttpStatus.INTERNAL_SERVER_ERROR;
+				response.ResponseMessage = ex.Message;
+			}
+
+			_logger.LogInformation($"{nameof(Delete)} - End");
 			return response;
 		}
 

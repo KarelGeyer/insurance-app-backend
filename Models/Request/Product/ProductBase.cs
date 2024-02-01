@@ -11,7 +11,5 @@ namespace insurance_backend.Models.Request.Product
 		public string CompanyName { get; set; }
 
 		public string CompanyLogo { get; set; }
-
-		public ProductCategory Category { get; set; }
 	}
 }

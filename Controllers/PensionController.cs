@@ -56,8 +56,8 @@ namespace insurance_backend.Controllers
 		}
 
 		[HttpPost]
-		[Route("action")]
-		public async Task<BaseResponse<bool>> CreatePensionSchemeProduct(PensionProductCreateRequest request)
+		[Route("[action]")]
+		public async Task<BaseResponse<bool>> CreatePensionSchemeProduct([FromBody] PensionProductCreateRequest request)
 		{
 			_logger.LogInformation($"{nameof(CreatePensionSchemeProduct)} - Attempting to create a life insurance product");
 
@@ -69,12 +69,6 @@ namespace insurance_backend.Controllers
 				throw new ArgumentNullException(nameof(request.CompanyName));
 			if (string.IsNullOrEmpty(request.CompanyLogo))
 				throw new ArgumentNullException(nameof(request.CompanyLogo));
-			if (
-				request.Category != ProductCategory.Pension
-				&& request.Category != ProductCategory.PropertyInsurance
-				&& request.Category != ProductCategory.LifeInsurance
-			)
-				throw new ArgumentNullException(nameof(request.CompanyLogo));
 			if (request.DynamicPercentage == 0)
 				throw new ArgumentNullException(nameof(request.DynamicPercentage));
 			if (request.ConservativePercentage == 0)
@@ -84,6 +78,21 @@ namespace insurance_backend.Controllers
 
 			BaseResponse<bool> response = await _pensionService.Create(request);
 			return response;
+		}
+
+		[HttpDelete]
+		[Route("[action]")]
+		public async Task<BaseResponse<bool>> DeletePensionSchemeProduct(string id)
+		{
+			_logger.LogInformation(
+				$"{nameof(DeletePensionSchemeProduct)} - Attempting to retrieve a calculation for life insurance using product with id {id}"
+			);
+
+			if (string.IsNullOrEmpty(id))
+				throw new ArgumentNullException(nameof(id));
+
+			BaseResponse<bool> res = await _pensionService.Delete(id);
+			return res;
 		}
 
 		[HttpPost]

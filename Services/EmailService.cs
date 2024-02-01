@@ -38,6 +38,7 @@ namespace insurance_backend.Services
 			try
 			{
 				client.Connect(_config.Smtp, _config.Port, _config.ShouldUseSSL);
+				client.Authenticate(_config.Username, _config.Password);
 				client.Send(email);
 				_logger.LogInformation($"{nameof(SendEmail)} - email sent successfully");
 			}

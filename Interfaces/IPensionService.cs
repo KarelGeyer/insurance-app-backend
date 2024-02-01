@@ -12,5 +12,7 @@ namespace insurance_backend.Interfaces
 		Task<BaseResponse<PensionCalcResponse>> CalculatePension(PensionCalcRequest data);
 
 		Task<BaseResponse<bool>> Create(PensionProductCreateRequest data);
+
+		Task<BaseResponse<bool>> Delete(string id);
 	}
 }

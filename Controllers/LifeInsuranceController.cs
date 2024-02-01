@@ -24,18 +24,18 @@ namespace insurance_backend.Controllers
 
 		[HttpGet]
 		[Route("[action]")]
-		public async Task<BaseResponse<List<LifeInsuranceProduct>>> GetLifeInsuraceProducts()
+		public async Task<BaseResponse<List<LifeInsuranceProduct>>> GetLifeInsuranceProducts()
 		{
-			_logger.LogInformation($"{nameof(GetLifeInsuraceProducts)} - Attempting to fetch all life insurance product details");
+			_logger.LogInformation($"{nameof(GetLifeInsuranceProducts)} - Attempting to fetch all life insurance product details");
 			BaseResponse<List<LifeInsuranceProduct>> res = await _lifeInsuranceService.GetAll();
 			return res;
 		}
 
 		[HttpGet]
 		[Route("[action]")]
-		public async Task<BaseResponse<LifeInsuranceProduct>> GetLifeInsuraceProductById(string id)
+		public async Task<BaseResponse<LifeInsuranceProduct>> GetLifeInsuranceProductById(string id)
 		{
-			_logger.LogInformation($"{nameof(GetLifeInsuraceProductById)} - Attempting to fetch life insurance product by id {id}");
+			_logger.LogInformation($"{nameof(GetLifeInsuranceProductById)} - Attempting to fetch life insurance product by id {id}");
 
 			if (string.IsNullOrEmpty(id))
 				throw new ArgumentNullException(nameof(id));
@@ -44,37 +44,9 @@ namespace insurance_backend.Controllers
 			return res;
 		}
 
-		[HttpGet]
-		[Route("[action]")]
-		public async Task<BaseResponse<LifeInsuranceProduct>> GetLifeInsuraceProductByProductId(string productId)
-		{
-			_logger.LogInformation(
-				$"{nameof(GetLifeInsuraceProductByProductId)} - Attempting to fetch life insurance product by product id {productId}"
-			);
-
-			if (string.IsNullOrEmpty(productId))
-				throw new ArgumentNullException(nameof(productId));
-
-			BaseResponse<LifeInsuranceProduct> res = await _lifeInsuranceService.GetOneByProductId(productId);
-			return res;
-		}
-
-		[HttpGet]
-		[Route("[action]")]
-		public async Task<BaseResponse<string>> GetLifeInsuraceProductId(string id)
-		{
-			_logger.LogInformation($"{nameof(GetLifeInsuraceProductId)} - Attempting to retrieve a life insurance productid using id {id}");
-
-			if (string.IsNullOrEmpty(id))
-				throw new ArgumentNullException(nameof(id));
-
-			BaseResponse<string> res = await _lifeInsuranceService.GetProductIdFromId(id);
-			return res;
-		}
-
 		[HttpPost]
-		[Route("action")]
-		public async Task<BaseResponse<bool>> CreateLifeInsuranceProduct(LifeInsuranceProductCreateRequest request)
+		[Route("[action]")]
+		public async Task<BaseResponse<bool>> CreateLifeInsuranceProduct([FromBody] LifeInsuranceProductCreateRequest request)
 		{
 			_logger.LogInformation($"{nameof(CreateLifeInsuranceProduct)} - Attempting to create a life insurance product");
 
@@ -85,12 +57,6 @@ namespace insurance_backend.Controllers
 			if (string.IsNullOrEmpty(request.CompanyName))
 				throw new ArgumentNullException(nameof(request.CompanyName));
 			if (string.IsNullOrEmpty(request.CompanyLogo))
-				throw new ArgumentNullException(nameof(request.CompanyLogo));
-			if (
-				request.Category != ProductCategory.Pension
-				&& request.Category != ProductCategory.PropertyInsurance
-				&& request.Category != ProductCategory.LifeInsurance
-			)
 				throw new ArgumentNullException(nameof(request.CompanyLogo));
 			if (request.DeathCoefficient == 0)
 				throw new ArgumentNullException(nameof(request.DeathCoefficient));
@@ -113,6 +79,21 @@ namespace insurance_backend.Controllers
 
 			BaseResponse<bool> response = await _lifeInsuranceService.Create(request);
 			return response;
+		}
+
+		[HttpDelete]
+		[Route("[action]")]
+		public async Task<BaseResponse<bool>> DeleteLifeInsuranceProduct(string id)
+		{
+			_logger.LogInformation(
+				$"{nameof(DeleteLifeInsuranceProduct)} - Attempting to retrieve a calculation for life insurance using product with id {id}"
+			);
+
+			if (string.IsNullOrEmpty(id))
+				throw new ArgumentNullException(nameof(id));
+
+			BaseResponse<bool> res = await _lifeInsuranceService.Delete(id);
+			return res;
 		}
 
 		[HttpPost]

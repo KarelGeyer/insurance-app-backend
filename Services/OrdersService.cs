@@ -16,11 +16,19 @@ namespace insurance_backend.Services
 		ILogger<OrdersService> _logger;
 		private readonly IMongoCollection<Order> _ordersCollection;
 		private readonly IEmailService _emailService;
+		private readonly IProductService<Product> _productService;
 
-		public OrdersService(IOptions<DBModel> dbModel, ILogger<OrdersService> logger, IEmailService emailService)
+		public OrdersService(
+			IOptions<DBModel> dbModel,
+			ILogger<OrdersService> logger,
+			IEmailService emailService,
+			IProductService<Product> productService
+		)
 		{
 			_logger = logger;
 			_emailService = emailService;
+			_productService = productService;
+
 			MongoClient client = new MongoClient(dbModel.Value.ConnectionURI);
 			IMongoDatabase db = client.GetDatabase(dbModel.Value.DatabaseName);
 			_ordersCollection = db.GetCollection<Order>(dbModel.Value.OrdersCollectionName);
@@ -93,25 +101,48 @@ namespace insurance_backend.Services
 		public async Task<BaseResponse<bool>> Create(OrderCreateRequest orderReq)
 		{
 			BaseResponse<bool> res = new();
-			Order order = orderReq.Order;
+
 			try
 			{
-				await _ordersCollection.InsertOneAsync(order);
+				BaseResponse<Product> productRes = await _productService.GetOne(orderReq.ProductId);
+				Product? product = productRes.Data;
 
-				string? emailBase = MailTemplates.ResourceManager.GetString("Mail_Order_Created_Body");
-				string? subjectBase = MailTemplates.ResourceManager.GetString("Mail_Order_Created_Subject");
-
-				if (!string.IsNullOrEmpty(emailBase) && !string.IsNullOrEmpty(subjectBase))
+				if (productRes == null || product == null)
 				{
-					string customerName = $"{order.Name} {order.Surname}";
-					string email = string.Format(emailBase, customerName, order.ProductName, order.Id);
-					string subject = string.Format(subjectBase, order.Id);
-
-					_emailService.SendEmail(email, subject, orderReq.EmailAddress);
+					res.Data = false;
+					res.Status = HttpStatus.NOT_FOUND;
+					res.ResponseMessage = "could not find a product that was supposedly ordered";
 				}
+				else
+				{
+					Order order = new Order()
+					{
+						ProductId = orderReq.ProductId,
+						ProductName = product.Name,
+						Category = product.Category,
+						Name = orderReq.Name,
+						Surname = orderReq.Surname,
+						Date = orderReq.Date,
+						YearlyPrice = orderReq.YearlyPrice,
+					};
 
-				res.Data = true;
-				res.Status = HttpStatus.OK;
+					await _ordersCollection.InsertOneAsync(order);
+
+					string? emailBase = MailTemplates.ResourceManager.GetString("Mail_Order_Created_Body");
+					string? subjectBase = MailTemplates.ResourceManager.GetString("Mail_Order_Created_Subject");
+
+					if (!string.IsNullOrEmpty(emailBase) && !string.IsNullOrEmpty(subjectBase))
+					{
+						string customerName = $"{order.Name} {order.Surname}";
+						string email = string.Format(emailBase, customerName, order.ProductName, order.Id);
+						string subject = string.Format(subjectBase, order.Id);
+
+						_emailService.SendEmail(email, subject, orderReq.EmailAddress);
+					}
+
+					res.Data = true;
+					res.Status = HttpStatus.OK;
+				}
 			}
 			catch (Exception ex)
 			{
