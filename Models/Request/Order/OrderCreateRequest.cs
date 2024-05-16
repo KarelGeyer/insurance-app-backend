@@ -1,6 +1,4 @@
 ﻿using insurance_backend.Enums;
-using MongoDB.Bson.Serialization.Attributes;
-using MongoDB.Bson;
 
 namespace insurance_backend.Models.Request.Order
 {
@@ -11,8 +9,6 @@ namespace insurance_backend.Models.Request.Order
 		public string Name { get; set; }
 
 		public string Surname { get; set; }
-
-		public DateTime Date { get; set; }
 
 		public double YearlyPrice { get; set; }
 

@@ -122,7 +122,7 @@ namespace insurance_backend.Services
 						Category = product.Category,
 						Name = orderReq.Name,
 						Surname = orderReq.Surname,
-						Date = orderReq.Date,
+						Date = DateTime.Now,
 						YearlyPrice = orderReq.YearlyPrice,
 					};
 

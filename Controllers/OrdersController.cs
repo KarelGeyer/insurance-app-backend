@@ -2,7 +2,9 @@
 using insurance_backend.Interfaces;
 using insurance_backend.Models;
 using insurance_backend.Models.Request.Order;
+using insurance_backend.Models.Request.Product;
 using insurance_backend.Models.Response;
+using insurance_backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
 namespace insurance_backend.Controllers
@@ -61,9 +63,6 @@ namespace insurance_backend.Controllers
 
 			if (orderReq.YearlyPrice.Equals(0))
 				throw new ArgumentNullException(nameof(orderReq.YearlyPrice));
-
-			if (orderReq.Date.Equals(DateTime.MinValue))
-				throw new ArgumentNullException(nameof(orderReq.Date));
 
 			_logger.LogInformation($"{nameof(CreateOrder)} - Attempting to create a new order");
 
